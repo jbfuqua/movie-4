@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Generative Movie Poster AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white">
+<div class="p-4">
+  <label class="flex items-center space-x-2">
+    <span>Nod to the Odd</span>
+    <button id="nod-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-600 transition-colors">
+      <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
+    </button>
+  </label>
+</div>
+<canvas id="poster-canvas" width="1024" height="1280"></canvas>
+
+<script>
+class PosterUI {
+  constructor() {
+    this.canvas = document.getElementById('poster-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.nodTheme = false;
+    this.setup();
+  }
+  setup() {
+    const toggle = document.getElementById('nod-toggle');
+    toggle.addEventListener('click', () => {
+      this.nodTheme = !this.nodTheme;
+      const knob = toggle.querySelector('span');
+      toggle.classList.toggle('bg-purple-600', this.nodTheme);
+      knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
+    });
+  }
+  addEraOverlays(decade) {
+    const ctx = this.ctx;
+    const { width:w, height:h } = this.canvas;
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    if (decade === '1950s' || decade === '1960s') {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      for (let i=0;i<w;i+=8){ctx.fillRect(i,0,1,h);} // print lines
+    }
+    if (decade === '1970s') {
+      ctx.fillStyle = 'rgba(255,165,0,0.1)';
+      for (let y=0;y<h;y+=40){ctx.fillRect(0,y,w,2);} // fold lines
+    }
+    if (decade === '1980s') {
+      ctx.fillStyle = 'rgba(0,255,255,0.05)';
+      for (let y=0;y<h;y+=3){ctx.fillRect(0,y,w,1);} // vhs scanlines
+    }
+    ctx.restore();
+  }
+}
+new PosterUI();
+</script>
+</body>
+</html>
