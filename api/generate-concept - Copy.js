@@ -1,4 +1,4 @@
-// api/generate-concept.js - Updated with Hardcore Mode
+// api/generate-concept.js - Fixed with comprehensive error handling
 import { getApiKeys } from './config.js';
 
 export default async function handler(req, res) {
@@ -58,7 +58,6 @@ export default async function handler(req, res) {
         const decades = ['1950s','1960s','1970s','1980s','1990s','2000s','2010s','2020s'];
         const forceRandomDecade = eraFilter === 'any' ? decades[Math.floor(Math.random() * decades.length)] : eraFilter;
 
-        // UPDATED: Separate theme systems for normal vs hardcore mode
         const creativeThemes = [
             'time manipulation','parallel dimensions','artificial consciousness','genetic memories',
             'color psychology','mathematical nightmares','botanical mutations','memory trading',
@@ -73,112 +72,18 @@ export default async function handler(req, res) {
             'emotional parasites (metaphoric)','dream archaeology','liquid shadows (lighting motif)',
             'paper-thin realities','dimensional doorways','bone libraries (symbolic)'
         ];
-
-        const hardcoreThemes = {
-            horror: [
-                // Psychological Horror
-                'mind-control cults manipulating reality', 'serial killer with supernatural abilities',
-                'demonic possession spreading through family', 'cursed artifacts claiming victims',
-                'ancient evil awakening in modern city', 'cannibalistic survival in wasteland',
-                'zombie virus outbreak in quarantine zone', 'vampire lords controlling underground',
-                'werewolf pack territory wars', 'ghost revenge killing descendants',
-                'haunted asylum with deadly experiments', 'occult rituals opening hell portals',
-                'body horror mutations from toxic waste', 'slasher stalking isolated victims',
-                'witch coven hexing entire town', 'necromancer raising undead army',
-                
-                // Gothic & Atmospheric
-                'cursed bloodline doomed to die violently', 'evil doll possessed by child spirit',
-                'plague turning humans into monsters', 'satanic church sacrificing innocents',
-                'shape-shifting entity hunting humans', 'cemetery caretaker raising corpses',
-                'mad scientist creating human hybrids', 'evil mirror showing deadly futures',
-                'demon-infested house trapping families', 'blood cult seeking immortality'
-            ],
-            
-            scifi: [
-                // Dystopian Tech Horror
-                'AI death squads hunting human survivors', 'cyberpunk corporations harvesting organs',
-                'alien parasites controlling world leaders', 'space prison riot with deadly inmates',
-                'robot uprising enslaving humanity', 'genetic experiments creating super soldiers',
-                'time travelers assassinating key figures', 'mars colonies under alien siege',
-                'virtual reality death games', 'clone army replacing original humans',
-                'nuclear wasteland mutant gangs', 'space station infected with alien virus',
-                'cybernetic implants hacking human minds', 'galactic empire committing genocide',
-                
-                // Alien & Space Horror  
-                'alien invasion harvesting human brains', 'space explorers trapped with monsters',
-                'terraforming disaster creating hellscape', 'alien zoo keeping humans as specimens',
-                'interstellar war crimes tribunal', 'space pirates raiding Earth colonies',
-                'alien-human hybrid breeding program', 'crashed alien ship releasing plague',
-                'space miners discovering hostile life', 'galactic bounty hunters vs fugitives',
-                'alien technology corrupting users', 'deep space rescue mission gone wrong',
-                
-                // Body Horror Sci-Fi
-                'human consciousness uploaded into machines', 'bioweapon turning soldiers into beasts',
-                'nano-technology consuming human tissue', 'dimensional portals releasing entities',
-                'space radiation creating violent mutants', 'alien DNA rewriting human genetics'
-            ],
-            
-            fusion: [
-                // Horror + Sci-Fi Combinations
-                'alien demons possessing space colonists', 'AI developing occult consciousness',
-                'time-traveling witch hunters vs future covens', 'cyberpunk vampire underground',
-                'haunted spaceship with ghost AI', 'alien technology summoning ancient evils',
-                'robotic exorcists vs digital demons', 'space necromancers raising alien dead',
-                'mutant werewolves in post-apocalypse', 'cybernetic serial killers in virtual reality',
-                'alien parasites with demonic intelligence', 'haunted mars base with possessed crew',
-                'time-displaced monsters in modern labs', 'AI-controlled zombie plague outbreak'
-            ]
-        };
-
-        // UPDATED: Smart theme selection based on hardcore mode and genre
-        let forceTheme;
-        if (safeNodTheme) {
-            // Hardcore mode - select based on genre preference
-            if (genreFilter === 'horror' && hardcoreThemes.horror) {
-                forceTheme = hardcoreThemes.horror[Math.floor(Math.random() * hardcoreThemes.horror.length)];
-            } else if (genreFilter === 'sci-fi' && hardcoreThemes.scifi) {
-                forceTheme = hardcoreThemes.scifi[Math.floor(Math.random() * hardcoreThemes.scifi.length)];
-            } else if (genreFilter === 'fusion' && hardcoreThemes.fusion) {
-                forceTheme = hardcoreThemes.fusion[Math.floor(Math.random() * hardcoreThemes.fusion.length)];
-            } else {
-                // If 'any' genre in hardcore mode, pick from all hardcore themes
-                const allHardcoreThemes = [
-                    ...hardcoreThemes.horror,
-                    ...hardcoreThemes.scifi,
-                    ...hardcoreThemes.fusion
-                ];
-                forceTheme = allHardcoreThemes[Math.floor(Math.random() * allHardcoreThemes.length)];
-            }
-        } else {
-            // Normal mode - use original creative themes
-            forceTheme = creativeThemes[Math.floor(Math.random() * creativeThemes.length)];
-        }
         
+        const forceTheme = creativeThemes[Math.floor(Math.random() * creativeThemes.length)];
         const seed = Date.now() % 100000;
 
-        console.log('🎯 Generation parameters:', { forceRandomDecade, forceTheme, seed, hardcoreMode: safeNodTheme });
+        console.log('🎯 Generation parameters:', { forceRandomDecade, forceTheme, seed });
 
-        // Build the JSON-only prompt with hardcore mode support
+        // Build the JSON-only prompt
         const genreConstraint = genreFilter === 'any' 
             ? 'MUST be Horror or Sci-Fi (or fusion)' 
             : `MUST be ${genreMap[genreFilter]}`;
 
-        // UPDATED: Add hardcore mode instructions
-        const hardcoreInstructions = safeNodTheme 
-            ? `
-            HARDCORE MODE ENABLED:
-            - Generate intense, edgy concepts with darker mature themes
-            - For Horror: psychological terror, gothic elements, supernatural threats (PG-13)
-            - For Sci-Fi: dystopian futures, alien threats, technological horror (PG-13)
-            - Push creative boundaries while maintaining content safety guidelines
-            - Focus on atmospheric dread and intense scenarios
-            - Make titles and concepts more aggressive and impactful
-            ` 
-            : '';
-
         const prompt = `You are a film art director. Produce ONLY valid JSON. No prose.
-
-${hardcoreInstructions}
 
 Constraints:
 - Era MUST be "${forceRandomDecade}"
@@ -292,14 +197,12 @@ Return JSON:
             }
         }
 
-        // Validate concept and ensure nod_theme is set
+        // Validate concept
         if (!concept || !concept.title || !concept.visual_spec) {
             console.log('⚠️ Invalid concept, using fallback');
             concept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
         } else {
-            // UPDATED: Make sure nod_theme is properly set
-            concept.nod_theme = safeNodTheme;
-            console.log('✅ Valid concept generated:', concept.title, '| Hardcore Mode:', safeNodTheme);
+            console.log('✅ Valid concept generated:', concept.title);
         }
 
         return res.status(200).json({ success: true, concept });
@@ -321,24 +224,16 @@ Return JSON:
     }
 }
 
-// UPDATED: Enhanced fallback with hardcore mode support
 function buildFallbackConcept(decade, genreFilter, seed, nodTheme) {
-    console.log('🛡️ Building fallback concept | Hardcore Mode:', nodTheme);
+    console.log('🛡️ Building fallback concept');
     
-    // Different titles based on hardcore mode
-    const normalTitles = [
+    const fallbackTitles = [
         'The Quantum Mirror', 'Stellar Anomaly', 'Digital Phantoms', 'Temporal Breach',
         'Neural Interface', 'Cosmic Frequency', 'Memory Protocol', 'Reality Grid',
         'Signal Lost', 'Void Walker', 'Time Fragment', 'Data Stream'
     ];
     
-    const hardcoreTitles = [
-        'Extinction Protocol', 'Viral Genesis', 'Cyber Slaughter', 'Plague Vector',
-        'Death Algorithm', 'Alien Harvest', 'Machine Apocalypse', 'Toxic Genesis',
-        'Predator Prime', 'Nightmare Code', 'Terror Strain', 'Kill Switch'
-    ];
-    
-    const normalTaglines = [
+    const fallbackTaglines = [
         'Reality is just the beginning.',
         'Some mysteries transcend time.',
         'The future remembers everything.',
@@ -347,44 +242,28 @@ function buildFallbackConcept(decade, genreFilter, seed, nodTheme) {
         'Beyond the edge of perception.'
     ];
     
-    const hardcoreTaglines = [
-        'Survival is not guaranteed.',
-        'Death is just the beginning.',
-        'No one is safe.',
-        'The hunt never ends.',
-        'Fear has evolved.',
-        'Humanity\'s final hour.'
-    ];
-    
-    const titles = nodTheme ? hardcoreTitles : normalTitles;
-    const taglines = nodTheme ? hardcoreTaglines : normalTaglines;
-    
-    const randomTitle = titles[seed % titles.length];
-    const randomTagline = taglines[seed % taglines.length];
-    
-    const synopsis = nodTheme 
-        ? 'A deadly threat emerges, forcing survivors into a desperate fight for their lives against overwhelming odds.'
-        : 'An enigmatic discovery challenges everything we thought we knew about reality.';
+    const randomTitle = fallbackTitles[seed % fallbackTitles.length];
+    const randomTagline = fallbackTaglines[seed % fallbackTaglines.length];
     
     return {
         title: randomTitle,
         tagline: randomTagline,
         decade: decade || '1980s',
         genre: genreFilter === 'any' ? 'Sci-Fi' : (genreFilter === 'horror' ? 'Horror' : genreFilter),
-        synopsis: synopsis,
+        synopsis: 'An enigmatic discovery challenges everything we thought we knew about reality.',
         visual_spec: {
-            subgenre: nodTheme ? 'hardcore-thriller' : 'retro-futurism',
-            palette: nodTheme ? ['#000000', '#8B0000', '#FF0000'] : ['#0a0a0a', '#4a90e2', '#ff6b35'],
+            subgenre: 'retro-futurism',
+            palette: ['#0a0a0a', '#4a90e2', '#ff6b35'],
             camera: { 
                 shot: 'medium close-up', 
                 lens: '85mm', 
                 depth_of_field: 'shallow focus' 
             },
-            composition: nodTheme ? 'dramatic low angle with harsh shadows' : 'centered portrait with negative space',
-            lighting: nodTheme ? 'harsh directional lighting with deep shadows' : 'dramatic rim lighting with color gels',
-            environment: nodTheme ? 'gritty industrial or wasteland setting' : 'minimal sci-fi setting',
+            composition: 'centered portrait with negative space',
+            lighting: 'dramatic rim lighting with color gels',
+            environment: 'minimal sci-fi setting',
             wardrobe_props: 'era-appropriate costume and tech props',
-            motifs: nodTheme ? ['danger symbols', 'industrial decay', 'harsh textures'] : ['geometric patterns', 'light beams', 'reflections'],
+            motifs: ['geometric patterns', 'light beams', 'reflections'],
             keywords: ['poster', 'no text', 'cinematic', 'professional'],
             banned: ['gore', 'blood', 'weapons', 'graphic injury']
         },

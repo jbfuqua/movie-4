@@ -163,7 +163,7 @@
                     <h3 class="text-xl font-montserrat font-bold text-white mb-4">Controls</h3>
                     <div class="space-y-4">
                         <div class="flex items-center justify-between">
-                          <label class="text-sm font-medium text-gray-300">Nod to the Odd</label>
+                          <label class="text-sm font-medium text-gray-300">Hardcore Mode</label>
                           <button id="nod-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-600 transition-colors">
                             <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
                           </button>
@@ -419,7 +419,7 @@
                     this.elements.nodToggle.addEventListener('click', () => {
                         this.nodTheme = !this.nodTheme;
                         const knob = this.elements.nodToggle.querySelector('span');
-                        this.elements.nodToggle.classList.toggle('bg-purple-600', this.nodTheme);
+                        this.elements.nodToggle.classList.toggle('bg-red-600', this.nodTheme); // Changed to red for hardcore
                         knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
                     });
                 }
@@ -574,11 +574,26 @@
                     'image ready for custom text overlay'
                 ];
                 
+                // Hardcore mode modifications
+                let hardcoreElements = '';
+                if (concept.nod_theme) {
+                    const genreLower = (concept.genre || '').toLowerCase();
+                    if (genreLower.includes('horror')) {
+                        hardcoreElements = 'intense atmospheric horror, dark psychological themes, gothic imagery, ominous shadows, spine-chilling mood, haunting visuals, macabre atmosphere (PG-13 appropriate), unsettling but tasteful horror elements';
+                    } else if (genreLower.includes('sci-fi')) {
+                        hardcoreElements = 'dystopian cyberpunk aesthetic, dark futuristic technology, industrial sci-fi elements, brutal alien environments, harsh technological landscapes, gritty space horror vibes, menacing robotic forms (PG-13 appropriate)';
+                    } else {
+                        // Default hardcore mode for other genres
+                        hardcoreElements = 'intense dramatic atmosphere, dark cinematic mood, harsh lighting contrasts, gritty realism, edgy visual style (PG-13 appropriate)';
+                    }
+                }
+                
                 const professionalSpecs = [
                     `Professional cinematic illustration for "${concept.title}"`,
                     `Genre: ${concept.genre || 'cinematic thriller'}`,
                     `Era: ${concept.decade} authentic visual style`,
                     `Visual story: ${concept.synopsis || 'compelling narrative'}`,
+                    hardcoreElements, // Add hardcore elements here
                     'High-end movie artwork composition WITHOUT ANY TEXT',
                     'Portrait orientation, cinematic framing',
                     'Professional studio lighting setup',
@@ -1032,7 +1047,7 @@
                 
                 let caption = '';
                 caption += `${genreEmoji} POSTER DROP: "${concept.title}" ${genreEmoji}\n\n`;
-                caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• Surreal Vibes' : ''}\n`;
+                caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• HARDCORE MODE' : ''}\n`;
                 caption += `💫 "${concept.tagline}"\n\n`;
                 
                 const synopsis = concept.synopsis ? 
