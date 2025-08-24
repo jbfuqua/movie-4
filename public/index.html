@@ -468,6 +468,7 @@
                     'concept': 'Generating concept...',
                     'image': 'Creating artwork...',
                     'text': 'Composing poster...',
+                    'hardcore': 'Applying hardcore elements...',
                     'complete': 'Complete!'
                 };
                 
@@ -589,9 +590,9 @@
                 }
                 
                 const professionalSpecs = [
-                    `Professional cinematic illustration for "${concept.title}"`,
+                    `Professional cinematic illustration for "${concept.title || 'Untitled'}"`,
                     `Genre: ${concept.genre || 'cinematic thriller'}`,
-                    `Era: ${concept.decade} authentic visual style`,
+                    `Era: ${concept.decade || 'modern'} authentic visual style`,
                     `Visual story: ${concept.synopsis || 'compelling narrative'}`,
                     hardcoreElements, // Add hardcore elements here
                     'High-end movie artwork composition WITHOUT ANY TEXT',
@@ -602,7 +603,7 @@
                     'Premium movie key art visual elements only',
                     'PG-13 rating appropriate content',
                     'Professional and tasteful visual presentation'
-                ];
+                ].filter(Boolean); // Remove any empty strings
 
                 const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
                     '. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
@@ -872,23 +873,24 @@
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.textAlign = 'center';
                 
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.shadowBlur = 3;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
+                // Enhanced shadow for better depth
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
                 
-                // Checkerboard layout for cast
+                // Improved checkerboard layout with better spacing
                 if (cast.length <= 2) {
-                    const lineHeight = fontSize * 1.4;
+                    const lineHeight = fontSize * 1.5;
                     cast.forEach((actor, index) => {
                         const cleanName = this.cleanActorName(actor);
                         const yPos = zoneY + (index * lineHeight);
                         ctx.fillText(cleanName, w / 2, yPos);
                     });
                 } else {
-                    const lineHeight = fontSize * 1.5;
-                    const leftX = w * 0.25;
-                    const rightX = w * 0.75;
+                    const lineHeight = fontSize * 1.6; // Increased spacing
+                    const leftX = w * 0.27; // Moved slightly inward
+                    const rightX = w * 0.73; // Moved slightly inward
                     
                     cast.forEach((actor, index) => {
                         const cleanName = this.cleanActorName(actor);
@@ -897,12 +899,17 @@
                         const row = Math.floor(index / 2);
                         const yPos = zoneY + (row * lineHeight);
                         
-                        const maxWidth = w * 0.2;
+                        // Better text fitting with ellipsis
+                        const maxWidth = w * 0.22;
                         let displayName = cleanName;
+                        ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
+                        
                         while (ctx.measureText(displayName).width > maxWidth && displayName.length > 8) {
                             displayName = displayName.substring(0, displayName.length - 4) + '...';
                         }
                         
+                        // Add subtle glow effect for cast names
+                        ctx.shadowBlur = 6;
                         ctx.fillText(displayName, xPos, yPos);
                     });
                 }
@@ -940,25 +947,37 @@
                 
                 ctx.save();
                 ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.textAlign = 'center';
                 
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
+                // Enhanced shadow for better readability
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
                 
                 const studioText = 'AN ABNORMAL STUDIOS FILM';
                 ctx.fillText(studioText, w / 2, zoneY);
                 
-                // Underline
+                // Improved underline with gradient effect
                 const textWidth = ctx.measureText(studioText).width;
-                const underlineY = zoneY + fontSize * 0.3;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-                ctx.lineWidth = 1;
+                const underlineY = zoneY + fontSize * 0.4;
+                const underlineWidth = textWidth * 0.8; // Slightly shorter than text
+                
+                // Create gradient for underline
+                const gradient = ctx.createLinearGradient(
+                    (w / 2) - (underlineWidth / 2), underlineY,
+                    (w / 2) + (underlineWidth / 2), underlineY
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
+                
+                ctx.strokeStyle = gradient;
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.moveTo((w / 2) - (textWidth / 2), underlineY);
-                ctx.lineTo((w / 2) + (textWidth / 2), underlineY);
+                ctx.moveTo((w / 2) - (underlineWidth / 2), underlineY);
+                ctx.lineTo((w / 2) + (underlineWidth / 2), underlineY);
                 ctx.stroke();
                 
                 ctx.restore();
@@ -979,12 +998,24 @@
                 
                 const runtimes = ['89 MINUTES', '95 MINUTES', '103 MINUTES', '117 MINUTES', '124 MINUTES'];
                 const runtime = runtimes[Math.floor(Math.random() * runtimes.length)];
-                const ratingLine = `NR  •  ${runtime}`;
                 
+                // Enhanced metadata line with better formatting
+                const ratingLine = `NR  •  ${runtime}`;
                 ctx.fillText(ratingLine, w / 2, zoneY);
                 
+                // More professional copyright with better spacing
                 const copyrightLine = `© ${new Date().getFullYear()} ABNORMAL STUDIOS`;
                 ctx.fillText(copyrightLine, w / 2, zoneY + lineHeight);
+                
+                // Add subtle decorative line above metadata
+                const lineY = zoneY - fontSize * 0.8;
+                const lineWidth = w * 0.3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo((w / 2) - (lineWidth / 2), lineY);
+                ctx.lineTo((w / 2) + (lineWidth / 2), lineY);
+                ctx.stroke();
                 
                 ctx.restore();
             }
