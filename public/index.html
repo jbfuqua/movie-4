@@ -12,28 +12,8 @@
         body {
             font-family: 'Lato', sans-serif;
             background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+        }
         
-    addEraOverlays(decade) {
-        const ctx = this.ctx;
-        const { width: w, height: h } = this.elements.canvas;
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        if (decade === '1950s' || decade === '1960s') {
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            for (let i=0;i<w;i+=8){ctx.fillRect(i,0,1,h);}
-        }
-        if (decade === '1970s') {
-            ctx.fillStyle = 'rgba(255,165,0,0.1)';
-            for (let y=0;y<h;y+=40){ctx.fillRect(0,y,w,2);}
-        }
-        if (decade === '1980s') {
-            ctx.fillStyle = 'rgba(0,255,255,0.05)';
-            for (let y=0;y<h;y+=3){ctx.fillRect(0,y,w,1);}
-        }
-        ctx.restore();
-    }
-
-}
         .font-oswald { font-family: 'Oswald', sans-serif; }
         .font-bebas { font-family: 'Bebas Neue', sans-serif; }
         .font-montserrat { font-family: 'Montserrat', sans-serif; }
@@ -360,32 +340,8 @@
                 this.initializeElements();
                 this.setupEventListeners();
                 this.checkBackendHealth();
-                // this.waitForFontsAndGenerate();
-				
            }
-		   
-			async waitForFontsAndGenerate() {
-				try {
-					// Add timeout to prevent infinite waiting
-					const fontTimeout = new Promise((_, reject) => 
-						setTimeout(() => reject(new Error('Font loading timeout')), 10000)
-					);
-					
-					await Promise.race([document.fonts.ready, fontTimeout]);
-					console.log('Fonts loaded, starting generation');
-					
-					// Additional delay to ensure fonts are fully available
-					setTimeout(() => {
-						this.handleGeneration();
-					}, 500);
-				} catch (error) {
-					console.warn('Font loading failed or timed out, proceeding anyway:', error);
-					setTimeout(() => {
-						this.handleGeneration();
-					}, 2000);
-				}
-			}
-			
+
             initializeElements() {
                 console.log('Initializing DOM elements...');
                 this.elements = {
@@ -422,7 +378,7 @@
                     
                     errorMessage: document.getElementById('error-message'),
                     errorText: document.getElementById('error-text'),
-						retryBtn: document.getElementById('retry-btn'),
+                    retryBtn: document.getElementById('retry-btn'),
                     
                     recentPosters: document.getElementById('recent-posters'),
                     canvas: document.getElementById('poster-canvas')
@@ -431,89 +387,87 @@
                 this.ctx = this.elements.canvas.getContext('2d');
                 this.nodTheme = false;
                 console.log('DOM elements initialized');
-				this.setupCanvasForHighDPI();
+                this.setupCanvasForHighDPI();
             }
-			
 
-			setupCanvasForHighDPI() {
-				const canvas = this.elements.canvas;
-				const ctx = this.ctx;
-				
-				// Get device pixel ratio
-				const dpr = window.devicePixelRatio || 1;
-				
-				// Store original canvas size
-				this.originalCanvasSize = {
-					width: canvas.width,
-					height: canvas.height
-				};
-				
-				// Scale canvas for high DPI if needed
-				if (dpr > 1) {
-					canvas.width = canvas.width * dpr;
-					canvas.height = canvas.height * dpr;
-					ctx.scale(dpr, dpr);
-					
-					// Update canvas style size
-					canvas.style.width = this.originalCanvasSize.width + 'px';
-					canvas.style.height = this.originalCanvasSize.height + 'px';
-				}
-				
-				// Set text rendering optimization
-				ctx.textRenderingOptimization = 'optimizeQuality';
-				if (ctx.imageSmoothingEnabled !== undefined) {
-					ctx.imageSmoothingEnabled = true;
-					if (ctx.imageSmoothingQuality) {
-						ctx.imageSmoothingQuality = 'high';
-					}
-				}
-			}
-
+            setupCanvasForHighDPI() {
+                const canvas = this.elements.canvas;
+                const ctx = this.ctx;
+                
+                // Get device pixel ratio
+                const dpr = window.devicePixelRatio || 1;
+                
+                // Store original canvas size
+                this.originalCanvasSize = {
+                    width: canvas.width,
+                    height: canvas.height
+                };
+                
+                // Scale canvas for high DPI if needed
+                if (dpr > 1) {
+                    canvas.width = canvas.width * dpr;
+                    canvas.height = canvas.height * dpr;
+                    ctx.scale(dpr, dpr);
+                    
+                    // Update canvas style size
+                    canvas.style.width = this.originalCanvasSize.width + 'px';
+                    canvas.style.height = this.originalCanvasSize.height + 'px';
+                }
+                
+                // Set text rendering optimization
+                ctx.textRenderingOptimization = 'optimizeQuality';
+                if (ctx.imageSmoothingEnabled !== undefined) {
+                    ctx.imageSmoothingEnabled = true;
+                    if (ctx.imageSmoothingQuality) {
+                        ctx.imageSmoothingQuality = 'high';
+                    }
+                }
+            }
 
             setupEventListeners() {
                 const self = this;
                 console.log('Setting up event listeners...');
                 
-				this.elements.generateBtn.addEventListener('click', function() { self.handleGenerationSafely(); });                this.elements.autoToggle.addEventListener('click', function() { self.toggleAutoGenerate(); });
+                this.elements.generateBtn.addEventListener('click', function() { self.handleGenerationSafely(); });
+                this.elements.autoToggle.addEventListener('click', function() { self.toggleAutoGenerate(); });
                 this.elements.saveBtn.addEventListener('click', function() { self.savePoster(); });
                 this.elements.shareBtn.addEventListener('click', function() { self.sharePoster(); });
                 this.elements.retryBtn.addEventListener('click', function() { self.handleGeneration(); });
+                
                 if (this.elements.nodToggle) {
-                  this.elements.nodToggle.addEventListener('click', () => {
-                    this.nodTheme = !this.nodTheme;
-                    const knob = this.elements.nodToggle.querySelector('span');
-                    this.elements.nodToggle.classList.toggle('bg-purple-600', this.nodTheme);
-                    knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
-                  });
+                    this.elements.nodToggle.addEventListener('click', () => {
+                        this.nodTheme = !this.nodTheme;
+                        const knob = this.elements.nodToggle.querySelector('span');
+                        this.elements.nodToggle.classList.toggle('bg-purple-600', this.nodTheme);
+                        knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
+                    });
                 }
                 
-				this.elements.genreFilter.addEventListener('change', function() {
-					console.log('Genre filter changed to:', self.elements.genreFilter.value);
-				});
-				this.elements.eraFilter.addEventListener('change', function() {
-					console.log('Era filter changed to:', self.elements.eraFilter.value);
-				});
-				this.elements.artStyleFilter.addEventListener('change', function() {
-					console.log('Art style filter changed to:', self.elements.artStyleFilter.value);
-				});               
+                this.elements.genreFilter.addEventListener('change', function() {
+                    console.log('Genre filter changed to:', self.elements.genreFilter.value);
+                });
+                this.elements.eraFilter.addEventListener('change', function() {
+                    console.log('Era filter changed to:', self.elements.eraFilter.value);
+                });
+                this.elements.artStyleFilter.addEventListener('change', function() {
+                    console.log('Art style filter changed to:', self.elements.artStyleFilter.value);
+                });               
                 this.elements.copyCaptionBtn.addEventListener('click', function() { self.copyInstagramCaption(); });
                 this.elements.copySongBtn.addEventListener('click', function() { self.copySongInfo(); });
                 
                 console.log('Event listeners set up');
             }
-			
-			async handleGenerationSafely() {
-				// Prevent multiple simultaneous generations
-				if (this.isGenerating) {
-					console.log('Generation already in progress, ignoring request');
-					return;
-				}
-				
-				// Add a small delay to prevent UI blocking
-				setTimeout(() => {
-					this.handleGeneration();
-				}, 100);
-			}
+
+            async handleGenerationSafely() {
+                if (this.isGenerating) {
+                    console.log('Generation already in progress, ignoring request');
+                    return;
+                }
+                
+                setTimeout(() => {
+                    this.handleGeneration();
+                }, 100);
+            }
 
             async checkBackendHealth() {
                 try {
@@ -634,159 +588,207 @@
                 }
             }
 
-			getEraSpecificStyling(decade, genre) {
-				const isSciFi = (genre || '').toLowerCase().includes('sci-fi');
-				const isHorror = (genre || '').toLowerCase().includes('horror');
-				
-				const eraStyles = {
-					'1950s': {
-						titleFont: 'Cinzel, serif',
-						letterSpacing: 0.05,
-						titleColor: '#ffffff',
-						titleGlow: 'rgba(255, 215, 0, 0.8)',
-						glowIntensity: 8,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 2
-					},
-					'1960s': {
-						titleFont: isSciFi ? 'Orbitron, sans-serif' : 'Bebas Neue, sans-serif',
-						letterSpacing: isSciFi ? 0.12 : 0.08,
-						titleColor: isSciFi ? '#00ffff' : '#ffffff',
-						titleGlow: isSciFi ? 'rgba(0, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.8)',
-						glowIntensity: 12,
-						useChrome: false,
-						useStroke: isSciFi,
-						strokeWidth: 2
-					},
-					'1970s': {
-						titleFont: 'Bebas Neue, sans-serif',
-						letterSpacing: 0.06,
-						titleColor: isHorror ? '#ff6b6b' : '#ffd700',
-						titleGlow: isHorror ? 'rgba(255, 107, 107, 0.9)' : 'rgba(255, 215, 0, 0.8)',
-						glowIntensity: 10,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 2,
-						useDropShadow: true
-					},
-					'1980s': {
-						titleFont: 'Impact, "Bebas Neue", "Arial Black", sans-serif',
-						letterSpacing: isSciFi ? 0.15 : 0.10,
-						titleColor: isSciFi ? '#00ffff' : (isHorror ? '#ff1493' : '#ff6b35'),
-						titleGlow: isSciFi ? 'rgba(0, 255, 255, 1.0)' : (isHorror ? 'rgba(255, 20, 147, 0.9)' : 'rgba(255, 107, 53, 0.9)'),
-						glowIntensity: 20,
-						useChrome: isSciFi,
-						useStroke: true,
-						strokeWidth: 3
-					},
-					'1990s': {
-						titleFont: 'Montserrat, sans-serif',
-						letterSpacing: 0.04,
-						titleColor: '#ffffff',
-						titleGlow: 'rgba(128, 128, 128, 0.7)',
-						glowIntensity: 6,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 1
-					},
-					'2000s': {
-						titleFont: 'Oswald, sans-serif',
-						letterSpacing: 0.06,
-						titleColor: isSciFi ? '#00ff41' : '#ffffff',
-						titleGlow: isSciFi ? 'rgba(0, 255, 65, 0.8)' : 'rgba(255, 255, 255, 0.7)',
-						glowIntensity: 8,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 1
-					},
-					'2010s': {
-						titleFont: 'Poppins, sans-serif',
-						letterSpacing: 0.03,
-						titleColor: '#ffffff',
-						titleGlow: 'rgba(59, 130, 246, 0.8)',
-						glowIntensity: 12,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 1
-					},
-					'2020s': {
-						titleFont: 'Montserrat, sans-serif',
-						letterSpacing: 0.02,
-						titleColor: '#ffffff',
-						titleGlow: 'rgba(0, 0, 0, 0.9)',
-						glowIntensity: 4,
-						useChrome: false,
-						useStroke: false,
-						strokeWidth: 1
-					}
-				};
-				
-				const style = eraStyles[decade] || eraStyles['1980s'];
-				
-				return {
-					...style,
-					titleWeight: '900',
-					titleMargin: 0.12,
-					maxTitleWidth: 0.85,
-					taglineFont: 'Lato, sans-serif',
-					creditsFont: 'Lato, sans-serif',
-					taglineColor: 'rgba(255, 255, 255, 0.9)',
-					creditsColor: 'rgba(255, 255, 255, 0.85)'
-				};
-			}
+            // ENHANCED ERA STYLING WITH PROFESSIONAL ENHANCEMENTS
+            getEraSpecificStyling(decade, genre) {
+                const isSciFi = (genre || '').toLowerCase().includes('sci-fi');
+                const isHorror = (genre || '').toLowerCase().includes('horror');
+                const isFusion = (genre || '').toLowerCase().includes('fusion');
+                
+                const eraStyles = {
+                    '1950s': {
+                        titleFont: 'serif, "Times New Roman", Cinzel',
+                        letterSpacing: 0.05,
+                        titleColor: isHorror ? '#ffcc00' : '#ffffff',
+                        titleGlow: isHorror ? 'rgba(255, 204, 0, 0.8)' : 'rgba(255, 255, 255, 0.6)',
+                        glowIntensity: 6,
+                        useChrome: false,
+                        useStroke: false,
+                        strokeWidth: 1,
+                        taglineFont: '"Times New Roman", serif',
+                        creditsFont: '"Times New Roman", serif',
+                        titleWeight: '700',
+                        professionalShadow: true
+                    },
+                    '1960s': {
+                        titleFont: isSciFi ? '"Orbitron", "Courier New", monospace' : '"Bebas Neue", "Arial Black", sans-serif',
+                        letterSpacing: isSciFi ? 0.15 : 0.08,
+                        titleColor: isSciFi ? '#00ffff' : '#ffffff',
+                        titleGlow: isSciFi ? 'rgba(0, 255, 255, 1.0)' : 'rgba(255, 255, 255, 0.8)',
+                        glowIntensity: isSciFi ? 15 : 8,
+                        useChrome: false,
+                        useStroke: isSciFi,
+                        strokeWidth: 2,
+                        taglineFont: '"Helvetica", sans-serif',
+                        creditsFont: '"Helvetica", sans-serif',
+                        titleWeight: '900',
+                        professionalShadow: true
+                    },
+                    '1970s': {
+                        titleFont: '"Bebas Neue", "Impact", sans-serif',
+                        letterSpacing: 0.06,
+                        titleColor: isHorror ? '#ff4444' : '#ffd700',
+                        titleGlow: isHorror ? 'rgba(255, 68, 68, 0.9)' : 'rgba(255, 215, 0, 0.8)',
+                        glowIntensity: 12,
+                        useChrome: false,
+                        useStroke: true,
+                        strokeWidth: 3,
+                        useDropShadow: true,
+                        taglineFont: '"Arial", sans-serif',
+                        creditsFont: '"Arial", sans-serif',
+                        titleWeight: '900',
+                        professionalShadow: true
+                    },
+                    '1980s': {
+                        titleFont: '"Impact", "Bebas Neue", "Arial Black", sans-serif',
+                        letterSpacing: isSciFi ? 0.20 : 0.12,
+                        titleColor: isSciFi ? '#00ffff' : (isHorror ? '#ff1493' : '#ff6b35'),
+                        titleGlow: isSciFi ? 'rgba(0, 255, 255, 1.0)' : (isHorror ? 'rgba(255, 20, 147, 1.0)' : 'rgba(255, 107, 53, 1.0)'),
+                        glowIntensity: 25,
+                        useChrome: isSciFi,
+                        useStroke: true,
+                        strokeWidth: 4,
+                        taglineFont: '"Arial", sans-serif',
+                        creditsFont: '"Arial", sans-serif',
+                        titleWeight: '900',
+                        eighties: true,
+                        professionalShadow: true
+                    },
+                    '1990s': {
+                        titleFont: '"Montserrat", "Arial", sans-serif',
+                        letterSpacing: 0.04,
+                        titleColor: '#ffffff',
+                        titleGlow: 'rgba(128, 128, 128, 0.7)',
+                        glowIntensity: 8,
+                        useChrome: false,
+                        useStroke: false,
+                        strokeWidth: 1,
+                        taglineFont: '"Arial", sans-serif',
+                        creditsFont: '"Arial", sans-serif',
+                        titleWeight: '700',
+                        subtle: true,
+                        professionalShadow: true
+                    },
+                    '2000s': {
+                        titleFont: '"Oswald", "Arial Narrow", sans-serif',
+                        letterSpacing: 0.06,
+                        titleColor: isSciFi ? '#00ff41' : '#ffffff',
+                        titleGlow: isSciFi ? 'rgba(0, 255, 65, 0.9)' : 'rgba(255, 255, 255, 0.8)',
+                        glowIntensity: 12,
+                        useChrome: false,
+                        useStroke: isSciFi,
+                        strokeWidth: 2,
+                        taglineFont: '"Arial", sans-serif',
+                        creditsFont: '"Arial", sans-serif',
+                        titleWeight: '700',
+                        matrix: isSciFi,
+                        professionalShadow: true
+                    },
+                    '2010s': {
+                        titleFont: '"Poppins", "Helvetica", sans-serif',
+                        letterSpacing: 0.03,
+                        titleColor: '#ffffff',
+                        titleGlow: 'rgba(59, 130, 246, 0.8)',
+                        glowIntensity: 10,
+                        useChrome: false,
+                        useStroke: false,
+                        strokeWidth: 1,
+                        taglineFont: '"Helvetica", sans-serif',
+                        creditsFont: '"Helvetica", sans-serif',
+                        titleWeight: '600',
+                        modern: true,
+                        professionalShadow: true
+                    },
+                    '2020s': {
+                        titleFont: '"Montserrat", "Helvetica", sans-serif',
+                        letterSpacing: 0.02,
+                        titleColor: '#ffffff',
+                        titleGlow: 'rgba(0, 0, 0, 0.9)',
+                        glowIntensity: 6,
+                        useChrome: false,
+                        useStroke: false,
+                        strokeWidth: 1,
+                        taglineFont: '"Helvetica", sans-serif',
+                        creditsFont: '"Helvetica", sans-serif',
+                        titleWeight: '500',
+                        contemporary: true,
+                        professionalShadow: true
+                    }
+                };
+                
+                const style = eraStyles[decade] || eraStyles['1980s'];
+                
+                // Professional enhancements for all eras
+                return {
+                    ...style,
+                    titleMargin: 0.08,
+                    maxTitleWidth: 0.88,
+                    taglineColor: 'rgba(255, 255, 255, 0.9)',
+                    creditsColor: 'rgba(255, 255, 255, 0.95)',
+                    
+                    // Professional typography settings
+                    titleLineHeight: 0.9,
+                    taglineSize: 0.25, // Relative to title size
+                    castSize: 0.05, // Relative to canvas width
+                    directorSize: 0.04,
+                    metadataSize: 0.03,
+                    
+                    // Enhanced visual effects
+                    multiLayerGlow: style.glowIntensity > 15,
+                    professionalShadows: true,
+                    textOutlineColor: 'rgba(0, 0, 0, 0.8)',
+                    
+                    // Era-specific enhancements
+                    needsFilmGrain: decade <= '1990s',
+                    needsVignette: true,
+                    colorTemperature: isSciFi ? 'cool' : (isHorror ? 'warm' : 'neutral')
+                };
+            }
 
-			smartCropToInstagramRatio(imageUrl) {
-			  const self = this;
-			  return new Promise((resolve) => {
-				try {
-				  const img = new Image();
-				  img.crossOrigin = 'anonymous';
-				  img.onerror = () => { console.warn('Image load failed:', imageUrl); resolve(); };
+            smartCropToInstagramRatio(imageUrl) {
+                const self = this;
+                return new Promise((resolve) => {
+                    try {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onerror = () => { console.warn('Image load failed:', imageUrl); resolve(); };
 
-				  img.onload = function () {
-					const canvas = self.elements.canvas;
-					const ctx = self.ctx;
+                        img.onload = function () {
+                            const canvas = self.elements.canvas;
+                            const ctx = self.ctx;
 
-					const isMobile = window.innerWidth <= 768;
-					const targetW = isMobile ? 512 : 1024;
+                            const isMobile = window.innerWidth <= 768;
+                            const targetW = isMobile ? 512 : 1024;
 
-					// Default IG portrait 4:5; set this.aspectRatio = 1.5 for 2:3 if you prefer
-					const aspect = (typeof self.aspectRatio === 'number' && self.aspectRatio > 0) ? self.aspectRatio : 1.25;
-					const targetH = Math.floor(targetW * aspect);
+                            const aspect = (typeof self.aspectRatio === 'number' && self.aspectRatio > 0) ? self.aspectRatio : 1.25;
+                            const targetH = Math.floor(targetW * aspect);
 
-					// Prepare destination; fill background to avoid any transparent band
-					canvas.width = targetW;
-					canvas.height = targetH;
-					ctx.clearRect(0, 0, targetW, targetH);
-					ctx.fillStyle = '#000';
-					ctx.fillRect(0, 0, targetW, targetH);
+                            canvas.width = targetW;
+                            canvas.height = targetH;
+                            ctx.clearRect(0, 0, targetW, targetH);
+                            ctx.fillStyle = '#000';
+                            ctx.fillRect(0, 0, targetW, targetH);
 
-					// High-quality resampling
-					if (ctx.imageSmoothingEnabled !== undefined) {
-					  ctx.imageSmoothingEnabled = true;
-					  if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
-					}
+                            if (ctx.imageSmoothingEnabled !== undefined) {
+                                ctx.imageSmoothingEnabled = true;
+                                if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
+                            }
 
-					// Cover fit + centered crop (like CSS object-fit: cover)
-					const scale = Math.max(targetW / img.width, targetH / img.height);
-					const sWidth  = targetW / scale;
-					const sHeight = targetH / scale;
-					const sx = Math.max(0, (img.width  - sWidth)  / 2);
-					const sy = Math.max(0, (img.height - sHeight) / 2);
+                            const scale = Math.max(targetW / img.width, targetH / img.height);
+                            const sWidth  = targetW / scale;
+                            const sHeight = targetH / scale;
+                            const sx = Math.max(0, (img.width  - sWidth)  / 2);
+                            const sy = Math.max(0, (img.height - sHeight) / 2);
 
-					ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
-					resolve();
-				  };
+                            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
+                            resolve();
+                        };
 
-				  // Normalize to blob:/data:
-				  img.src = normalizeToBlobUrl(imageUrl);
-				} catch (_) {
-				  resolve();
-				}
-			  });
-			}
-
+                        img.src = normalizeToBlobUrl(imageUrl);
+                    } catch (_) {
+                        resolve();
+                    }
+                });
+            }
 
             addGradientOverlays() {
                 const canvas = this.elements.canvas;
@@ -809,513 +811,498 @@
                 ctx.fillRect(0, h * 0.75, w, h * 0.25);
             }
 
-			wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-				if (!text || !ctx) return [];
-				
-				try {
-					const words = text.split(' ');
-					const lines = [];
-					let currentLine = '';
-					let wordCount = 0;
-					const maxWords = 50; // Prevent infinite processing
+            // PROFESSIONAL POSTER RENDERING SYSTEM
+            async renderTitleAndCredits(concept) {
+                const canvas = this.elements.canvas;
+                const ctx = this.ctx;
+                const w = canvas.width;
+                const h = canvas.height;
 
-					for (let i = 0; i < words.length && wordCount < maxWords; i++) {
-						const word = words[i];
-						wordCount++;
-						
-						// Limit individual word length to prevent infinite loops
-						let processedWord = word;
-						if (word.length > 20) {
-							processedWord = word.substring(0, 17) + '...';
-						}
-						
-						// Check if single word is too long
-						if (ctx.measureText(processedWord).width > maxWidth) {
-							// If we have a current line, push it first
-							if (currentLine) {
-								lines.push(currentLine.trim());
-								currentLine = '';
-							}
-							
-							// Break the long word with safety limits
-							let remainingWord = processedWord;
-							let breakCount = 0;
-							while (remainingWord.length > 0 && breakCount < 10) {
-								let fitText = remainingWord;
-								let charCount = 0;
-								while (ctx.measureText(fitText).width > maxWidth && 
-									   fitText.length > 1 && 
-									   charCount < 50) {
-									fitText = fitText.slice(0, -1);
-									charCount++;
-								}
-								if (fitText.length > 0) {
-									lines.push(fitText);
-									remainingWord = remainingWord.slice(fitText.length);
-								} else {
-									break; // Prevent infinite loop
-								}
-								breakCount++;
-							}
-						} else {
-							const testLine = currentLine ? currentLine + ' ' + processedWord : processedWord;
-							const testWidth = ctx.measureText(testLine).width;
-							
-							if (testWidth <= maxWidth) {
-								currentLine = testLine;
-							} else {
-								if (currentLine) {
-									lines.push(currentLine.trim());
-								}
-								currentLine = processedWord;
-							}
-						}
-						
-						// Limit total lines to prevent excessive processing
-						if (lines.length >= 5) {
-							break;
-						}
-					}
-					
-					if (currentLine && lines.length < 5) {
-						lines.push(currentLine.trim());
-					}
-					
-					return lines;
-					
-				} catch (error) {
-					console.error('Error in wrapText:', error);
-					return [text.substring(0, 20) + '...']; // Fallback
-				}
-			}
+                this.styling = this.getEraSpecificStyling(concept.decade, concept.genre);
+                const styling = this.styling;
 
-			safeTextMeasurement(ctx, text, font) {
-				// Ensure consistent context state for measurement
-				const originalFont = ctx.font;
-				const originalTextAlign = ctx.textAlign;
-				const originalTextBaseline = ctx.textBaseline;
-				
-				ctx.font = font;
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				
-				const measurement = ctx.measureText(text);
-				
-				// Restore original context state
-				ctx.font = originalFont;
-				ctx.textAlign = originalTextAlign;
-				ctx.textBaseline = originalTextBaseline;
-				
-				return measurement;
-			}
-			
+                this.renderProfessionalTitle(ctx, concept, w, h, styling);
+                this.renderProfessionalCredits(ctx, concept, w, h, styling);
+            }
 
-			// REPLACE your existing renderTitleAndCredits function with this enhanced version
-			async renderTitleAndCredits(concept) {
-				const canvas = this.elements.canvas;
-				const ctx = this.ctx;
-				const w = canvas.width;
-				const h = canvas.height;
+            renderProfessionalTitle(ctx, concept, w, h, styling) {
+                const titleText = (concept?.title || 'UNTITLED').toUpperCase();
+                const tagline = concept?.tagline || '';
+                
+                const baseSize = Math.min(w, h);
+                let titleSize = Math.min(Math.floor(baseSize / 8), 140);
+                const taglineSize = Math.floor(titleSize * 0.25);
+                
+                const titleY = h * 0.15;
+                const maxTitleWidth = w * 0.85;
+                
+                ctx.font = `900 ${titleSize}px ${styling.titleFont}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                let titleWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
+                
+                while (titleWidth > maxTitleWidth && titleSize > 32) {
+                    titleSize -= 4;
+                    ctx.font = `900 ${titleSize}px ${styling.titleFont}`;
+                    titleWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
+                }
+                
+                const titleLines = this.intelligentTitleWrap(titleText, maxTitleWidth, ctx, styling.letterSpacing);
+                const lineHeight = titleSize * 1.1;
+                const totalTitleHeight = titleLines.length * lineHeight;
+                const titleStartY = titleY - (totalTitleHeight / 2);
+                
+                titleLines.forEach((line, index) => {
+                    const yPos = titleStartY + (index * lineHeight);
+                    this.renderTitleWithProfessionalEffects(ctx, line, w / 2, yPos, titleSize, styling);
+                });
+                
+                if (tagline) {
+                    const taglineY = titleStartY + totalTitleHeight + (titleSize * 0.4);
+                    this.renderTagline(ctx, tagline, w / 2, taglineY, taglineSize, styling);
+                }
+            }
 
-				// Get era-specific styling (keep your existing getEraSpecificStyling)
-				this.styling = this.getEraSpecificStyling(concept.decade, concept.genre);
-				const styling = this.styling;
+            renderTitleWithProfessionalEffects(ctx, text, x, y, fontSize, styling) {
+                ctx.save();
+                
+                this.renderTextShadow(ctx, text, x, y, fontSize, styling);
+                
+                if (styling.useChrome) {
+                    this.renderChromeEffect(ctx, text, x, y, styling);
+                }
+                
+                if (styling.useStroke) {
+                    this.renderStrokeEffect(ctx, text, x, y, fontSize, styling);
+                }
+                
+                this.renderMainTitleWithGlow(ctx, text, x, y, fontSize, styling);
+                
+                ctx.restore();
+            }
 
-				// --- TITLE RENDERING (Enhanced) ---
-				this.renderEnhancedTitle(ctx, concept, w, h, styling);
+            renderTextShadow(ctx, text, x, y, fontSize, styling) {
+                const shadowOffsetX = Math.floor(fontSize / 20);
+                const shadowOffsetY = Math.floor(fontSize / 15);
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                this.renderTextWithSpacing(ctx, text, x + shadowOffsetX * 2, y + shadowOffsetY * 2, styling.letterSpacing);
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                this.renderTextWithSpacing(ctx, text, x + shadowOffsetX, y + shadowOffsetY, styling.letterSpacing);
+            }
 
-				// --- CREDITS RENDERING (New System) ---
-				this.renderCreditsWithHierarchy(ctx, concept, canvas, styling);
-			}
+            renderChromeEffect(ctx, text, x, y, styling) {
+                ctx.fillStyle = '#2a2a2a';
+                this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+                
+                ctx.strokeStyle = styling.titleColor;
+                ctx.lineWidth = styling.strokeWidth;
+                ctx.lineJoin = 'round';
+                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+                
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1;
+                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+            }
 
-			// NEW: Enhanced title rendering with era effects
-			renderEnhancedTitle(ctx, concept, w, h, styling) {
-				const titleText = (concept?.title || 'UNTITLED').toUpperCase();
-				
-				const horizontalMargin = Math.floor(w * styling.titleMargin);
-				const maxTitleWidth = Math.floor(w * styling.maxTitleWidth);
-				
-				ctx.textBaseline = 'top';
-				ctx.textAlign = 'center';
-				
-				let fontSize = Math.min(Math.floor(w / 6), 140);
-				ctx.font = `${styling.titleWeight} ${fontSize}px ${styling.titleFont}`;
-				
-				let totalWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
-				
-				while (totalWidth > maxTitleWidth && fontSize > 24) {
-					fontSize -= 3;
-					ctx.font = `${styling.titleWeight} ${fontSize}px ${styling.titleFont}`;
-					totalWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
-				}
-				
-				const titleLines = this.smartTitleWrap(titleText, maxTitleWidth, ctx, styling.letterSpacing);
-				
-				const lineHeight = fontSize * 1.1;
-				const startY = Math.max(h * 0.08, horizontalMargin);
-				
-				titleLines.forEach((line, index) => {
-					const yPos = startY + (index * lineHeight);
-					this.renderTitleWithEffects(ctx, line, w / 2, yPos, fontSize, styling);
-				});
-			}
-			
-			measureTextWithSpacing(ctx, text, spacing) {
-				if (!spacing || spacing === 0) return ctx.measureText(text).width;
-				
-				let totalWidth = 0;
-				const spaceWidth = ctx.measureText('M').width * spacing;
-				
-				for (let i = 0; i < text.length; i++) {
-					totalWidth += ctx.measureText(text[i]).width;
-					if (i < text.length - 1) {
-						totalWidth += spaceWidth;
-					}
-				}
-				
-				return totalWidth;
-			}
-			smartTitleWrap(title, maxWidth, ctx, spacing) {
-				const words = title.split(' ');
-				if (words.length === 1) return [title];
-				
-				const lines = [];
-				let currentLine = '';
-				
-				for (let word of words) {
-					const testLine = currentLine ? `${currentLine} ${word}` : word;
-					const testWidth = this.measureTextWithSpacing(ctx, testLine, spacing);
-					
-					if (testWidth <= maxWidth) {
-						currentLine = testLine;
-					} else {
-						if (currentLine) lines.push(currentLine);
-						currentLine = word;
-					}
-				}
-				
-				if (currentLine) lines.push(currentLine);
-				return lines.slice(0, 2);
-			}
+            renderStrokeEffect(ctx, text, x, y, fontSize, styling) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.lineWidth = styling.strokeWidth + 2;
+                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+                
+                ctx.strokeStyle = styling.titleGlow;
+                ctx.lineWidth = styling.strokeWidth;
+                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+            }
 
-			renderTitleWithEffects(ctx, text, x, y, fontSize, styling) {
-				ctx.save();
-				
-				// Shadow
-				ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-				const shadowOffset = styling.useDropShadow ? Math.floor(fontSize / 15) : 3;
-				this.renderTextWithSpacing(ctx, text, x + shadowOffset, y + shadowOffset, styling.letterSpacing);
-				
-				// Chrome effect (1980s sci-fi)
-				if (styling.useChrome) {
-					ctx.fillStyle = '#1a1a1a';
-					this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-					
-					ctx.strokeStyle = styling.titleColor;
-					ctx.lineWidth = styling.strokeWidth;
-					ctx.lineJoin = 'round';
-					this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-				}
-				
-				// Stroke (various eras)
-				if (styling.useStroke && !styling.useChrome) {
-					ctx.strokeStyle = styling.titleGlow;
-					ctx.lineWidth = styling.strokeWidth;
-					this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-				}
-				
-				// Main glow
-				ctx.shadowColor = styling.titleGlow;
-				ctx.shadowBlur = styling.glowIntensity;
-				ctx.fillStyle = styling.titleColor;
-				this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-				
-				// Bright highlight (strong glow eras)
-				if (styling.glowIntensity > 15) {
-					ctx.shadowBlur = styling.glowIntensity * 1.5;
-					ctx.fillStyle = '#ffffff';
-					this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-				}
-				
-				ctx.restore();
-			}
+            renderMainTitleWithGlow(ctx, text, x, y, fontSize, styling) {
+                for (let i = 0; i < 3; i++) {
+                    ctx.shadowColor = styling.titleGlow;
+                    ctx.shadowBlur = styling.glowIntensity + (i * 5);
+                    ctx.fillStyle = styling.titleColor;
+                    this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+                }
+                
+                if (styling.glowIntensity > 15) {
+                    ctx.shadowBlur = styling.glowIntensity * 2;
+                    ctx.fillStyle = '#ffffff';
+                    this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
+                }
+                
+                ctx.shadowBlur = 0;
+            }
 
-			renderTextWithSpacing(ctx, text, x, y, spacing) {
-				if (!spacing || spacing === 0) {
-					ctx.fillText(text, x, y);
-					return;
-				}
-				
-				// Calculate total width including spacing
-				const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
-				
-				// Start from the left edge of centered text
-				let currentX = x - (totalWidth / 2);
-				const spaceWidth = ctx.measureText('M').width * spacing;
-				
-				for (let i = 0; i < text.length; i++) {
-					const char = text[i];
-					const charWidth = ctx.measureText(char).width;
-					
-					// Center each character within its allocated space
-					ctx.fillText(char, currentX + (charWidth / 2), y);
-					currentX += charWidth;
-					
-					if (i < text.length - 1) {
-						currentX += spaceWidth;
-					}
-				}
-			}
+            renderTagline(ctx, tagline, x, y, size, styling) {
+                ctx.save();
+                ctx.font = `400 ${size}px ${styling.taglineFont || 'Lato, sans-serif'}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillText(tagline, x + 2, y + 2);
+                
+                ctx.fillStyle = styling.taglineColor || 'rgba(255, 255, 255, 0.9)';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(tagline, x, y);
+                
+                ctx.restore();
+            }
 
-			strokeTextWithSpacing(ctx, text, x, y, spacing) {
-				if (!spacing || spacing === 0) {
-					ctx.strokeText(text, x, y);
-					return;
-				}
-				
-				const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
-				let currentX = x - (totalWidth / 2);
-				const spaceWidth = ctx.measureText('M').width * spacing;
-				
-				for (let i = 0; i < text.length; i++) {
-					const char = text[i];
-					const charWidth = ctx.measureText(char).width;
-					
-					ctx.strokeText(char, currentX + (charWidth / 2), y);
-					currentX += charWidth;
-					
-					if (i < text.length - 1) {
-						currentX += spaceWidth;
-					}
-				}
-			}
+            renderProfessionalCredits(ctx, concept, w, h, styling) {
+                const creditZones = {
+                    cast: { start: 0.72, height: 0.12 },
+                    director: { start: 0.85, height: 0.04 },
+                    studio: { start: 0.90, height: 0.03 },
+                    metadata: { start: 0.94, height: 0.05 }
+                };
+                
+                const cast = this.generateProfessionalCast(concept);
+                
+                this.renderCastSection(ctx, cast, w, h, creditZones.cast, styling);
+                this.renderDirectorSection(ctx, concept, w, h, creditZones.director, styling);
+                this.renderStudioSection(ctx, concept, w, h, creditZones.studio, styling);
+                this.renderMetadataSection(ctx, concept, w, h, creditZones.metadata, styling);
+            }
 
-			// IMPROVED: Better credit layout system
-			renderCreditsWithHierarchy(ctx, concept, canvas, styling) {
-				const w = canvas.width;
-				const h = canvas.height;
-				
-				// Calculate available space for credits
-				const creditStartY = h * 0.72;
-				const creditEndY = h * 0.96;
-				const availableHeight = creditEndY - creditStartY;
-				
-				// Generate cast with fallback
-				const cast = (concept.cast && concept.cast.length) ? concept.cast.slice(0, 4) : this.generateFallbackCast().slice(0, 4);
-				
-				const sections = [
-					{
-						type: 'cast',
-						items: cast,
-						fontSize: Math.max(16, Math.floor(w / 45)),
-						spacing: 1.8,
-						weight: 'bold'
-					},
-					{
-						type: 'crew',
-						items: [
-							concept.director ? `DIRECTED BY ${concept.director.toUpperCase()}` : null,
-							'AN ABNORMAL STUDIOS FILM'
-						].filter(Boolean),
-						fontSize: Math.max(14, Math.floor(w / 50)),
-						spacing: 1.4,
-						weight: 'bold'
-					},
-					{
-						type: 'metadata', 
-						items: [
-							'NR  •  ' + ['89 MINUTES','95 MINUTES','103 MINUTES','117 MINUTES'][Math.floor(Math.random()*4)],
-							`© ${new Date().getFullYear()} ABNORMAL STUDIOS`
-						],
-						fontSize: Math.max(12, Math.floor(w / 60)),
-						spacing: 1.3,
-						weight: 'normal'
-					}
-				];
-				
-				this.renderCreditSections(ctx, sections, w, creditStartY, availableHeight, styling);
-			}
+            renderCastSection(ctx, cast, w, h, zone, styling) {
+                const zoneY = h * zone.start;
+                const fontSize = Math.max(14, Math.floor(w / 50));
+                
+                ctx.save();
+                ctx.font = `600 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.95)';
+                ctx.textAlign = 'center';
+                
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                if (cast.length <= 2) {
+                    const lineHeight = fontSize * 1.4;
+                    cast.forEach((actor, index) => {
+                        const cleanName = this.cleanActorName(actor);
+                        const yPos = zoneY + (index * lineHeight);
+                        ctx.fillText(cleanName, w / 2, yPos);
+                    });
+                } else {
+                    const lineHeight = fontSize * 1.5;
+                    const leftX = w * 0.25;
+                    const rightX = w * 0.75;
+                    
+                    cast.forEach((actor, index) => {
+                        const cleanName = this.cleanActorName(actor);
+                        const isLeft = index % 2 === 0;
+                        const xPos = isLeft ? leftX : rightX;
+                        const row = Math.floor(index / 2);
+                        const yPos = zoneY + (row * lineHeight);
+                        
+                        const maxWidth = w * 0.2;
+                        let displayName = cleanName;
+                        while (ctx.measureText(displayName).width > maxWidth && displayName.length > 8) {
+                            displayName = displayName.substring(0, displayName.length - 4) + '...';
+                        }
+                        
+                        ctx.fillText(displayName, xPos, yPos);
+                    });
+                }
+                
+                ctx.restore();
+            }
 
-			renderCreditSections(ctx, sections, w, startY, availableHeight, styling) {
-				let currentY = startY;
-				const sectionGap = Math.floor(availableHeight * 0.08); // 8% gap between sections
-				
-				sections.forEach((section, sectionIndex) => {
-					if (currentY >= startY + availableHeight) return; // Stop if out of space
-					
-					const { type, items, fontSize, spacing, weight } = section;
-					
-					if (type === 'cast') {
-						currentY = this.renderCastSection(ctx, items, w, currentY, fontSize, spacing, weight, styling);
-					} else {
-						currentY = this.renderTextSection(ctx, items, w, currentY, fontSize, spacing, weight, styling);
-					}
-					
-					// Add gap between sections (but not after the last one)
-					if (sectionIndex < sections.length - 1) {
-						currentY += sectionGap;
-					}
-				});
-			}
+            renderDirectorSection(ctx, concept, w, h, zone, styling) {
+                const director = concept.director || this.generateDirector();
+                const zoneY = h * zone.start;
+                const fontSize = Math.max(13, Math.floor(w / 55));
+                
+                ctx.save();
+                ctx.font = `700 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.95)';
+                ctx.textAlign = 'center';
+                
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                ctx.font = `400 ${Math.floor(fontSize * 0.8)}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillText('DIRECTED BY', w / 2, zoneY - fontSize * 0.3);
+                
+                ctx.font = `700 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillText(director.toUpperCase(), w / 2, zoneY);
+                
+                ctx.restore();
+            }
 
-			renderCastSection(ctx, cast, w, startY, fontSize, spacing, weight, styling) {
-				let currentY = startY;
-				const lineHeight = fontSize * spacing;
-				
-				ctx.font = `${weight} ${fontSize}px ${styling.creditsFont || 'Arial'}`;
-				ctx.fillStyle = styling.creditsColor;
-				ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-				ctx.shadowBlur = 3;
-				
-				// Smart positioning based on cast size
-				if (cast.length <= 2) {
-					// Center single actors
-					cast.forEach(actor => {
-						const cleanName = String(actor).split(' AS ')[0].toUpperCase();
-						ctx.textAlign = 'center';
-						ctx.fillText(cleanName, w / 2, currentY);
-						currentY += lineHeight;
-					});
-				} else {
-					// Two-column layout for multiple actors
-					cast.forEach((actor, index) => {
-						const cleanName = String(actor).split(' AS ')[0].toUpperCase();
-						
-						// Truncate long names
-						let displayName = cleanName;
-						const maxWidth = w * 0.35;
-						while (ctx.measureText(displayName).width > maxWidth && displayName.length > 8) {
-							displayName = displayName.substring(0, displayName.length - 3) + '...';
-						}
-						
-						// Position: left column for even indices, right for odd
-						const isLeft = index % 2 === 0;
-						const xPos = isLeft ? w * 0.25 : w * 0.75;
-						ctx.textAlign = 'center';
-						
-						ctx.fillText(displayName, xPos, currentY);
-						
-						// Only advance Y every 2 actors (since we're doing 2 columns)
-						if (!isLeft || index === cast.length - 1) {
-							currentY += lineHeight;
-						}
-					});
-				}
-				
-				ctx.shadowBlur = 0;
-				return currentY;
-			}
+            renderStudioSection(ctx, concept, w, h, zone, styling) {
+                const zoneY = h * zone.start;
+                const fontSize = Math.max(12, Math.floor(w / 60));
+                
+                ctx.save();
+                ctx.font = `600 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.9)';
+                ctx.textAlign = 'center';
+                
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 4;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                const studioText = 'AN ABNORMAL STUDIOS FILM';
+                ctx.fillText(studioText, w / 2, zoneY);
+                
+                const textWidth = ctx.measureText(studioText).width;
+                const underlineY = zoneY + fontSize * 0.3;
+                ctx.strokeStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.9)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo((w / 2) - (textWidth / 2), underlineY);
+                ctx.lineTo((w / 2) + (textWidth / 2), underlineY);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
 
-			renderTextSection(ctx, items, w, startY, fontSize, spacing, weight, styling) {
-				let currentY = startY;
-				const lineHeight = fontSize * spacing;
-				
-				ctx.font = `${weight} ${fontSize}px ${styling.creditsFont || 'Arial'}`;
-				ctx.fillStyle = styling.creditsColor;
-				ctx.textAlign = 'center';
-				
-				items.forEach(item => {
-					if (item && currentY < startY + 200) { // Safety check
-						ctx.fillText(String(item), w / 2, currentY);
-						currentY += lineHeight;
-					}
-				});
-				
-				return currentY;
-			}
+            renderMetadataSection(ctx, concept, w, h, zone, styling) {
+                const zoneY = h * zone.start;
+                const fontSize = Math.max(11, Math.floor(w / 70));
+                const lineHeight = fontSize * 1.3;
+                
+                ctx.save();
+                ctx.font = `400 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.textAlign = 'center';
+                
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                ctx.shadowBlur = 2;
+                
+                const runtimes = ['89 MINUTES', '95 MINUTES', '103 MINUTES', '117 MINUTES', '124 MINUTES'];
+                const runtime = runtimes[Math.floor(Math.random() * runtimes.length)];
+                const ratingLine = `NR  •  ${runtime}`;
+                
+                ctx.fillText(ratingLine, w / 2, zoneY);
+                
+                const copyrightLine = `© ${new Date().getFullYear()} ABNORMAL STUDIOS`;
+                ctx.fillText(copyrightLine, w / 2, zoneY + lineHeight);
+                
+                ctx.restore();
+            }
 
-			// IMPROVED: Better fallback cast with no duplicates
-			generateFallbackCast() {
-				const names = [
-					'ELENA CROSS', 'MARCUS VALE', 'ZARA STORM', 'VINCENT KANE',
-					'LUNA THORNE', 'DANTE RIVERS', 'IRIS BLAKE', 'PHOENIX STEEL',
-					'NOVA FOX', 'ATLAS NIGHT', 'SAGE HUNTER', 'RAVEN COLE'
-				];
-				
-				// Shuffle and take first 4 to avoid duplicates
-				const shuffled = names.sort(() => Math.random() - 0.5);
-				return shuffled.slice(0, 4);
-			}
+            // UTILITY FUNCTIONS
+            generateProfessionalCast(concept) {
+                if (concept.cast && concept.cast.length) {
+                    return concept.cast.slice(0, 4);
+                }
+                
+                const professionalNames = [
+                    'ELENA CROSS', 'MARCUS VALE', 'ZARA STORM', 'VINCENT KANE',
+                    'LUNA THORNE', 'DANTE RIVERS', 'IRIS BLAKE', 'PHOENIX STEEL',
+                    'NOVA FOX', 'ATLAS NIGHT', 'SAGE HUNTER', 'RAVEN COLE',
+                    'JADE WINTERS', 'ORION BLACK', 'RUBY SHARP', 'COLE GREY'
+                ];
+                
+                const shuffled = [...professionalNames].sort(() => Math.random() - 0.5);
+                return shuffled.slice(0, 4);
+            }
 
+            generateDirector() {
+                const directors = [
+                    'CAMERON WELLS', 'JORDAN CROSS', 'ALEX NOVA', 'MORGAN STEEL',
+                    'RILEY STORM', 'CASEY NIGHT', 'DREW HUNTER', 'SAGE RIVERS'
+                ];
+                return directors[Math.floor(Math.random() * directors.length)];
+            }
 
-			renderTitleSafely(concept, ctx, w, h, styling, maxTextWidth) {
-				const title = (concept.title || '').toUpperCase();
-				if (!title) return;
-				
-				try {
-					// More conservative margins and aggressive sizing
-					const extraSafeMargin = w * 0.12;
-					const conservativeMaxWidth = w - (extraSafeMargin * 2);
+            cleanActorName(actor) {
+                return String(actor).split(' AS ')[0].trim().toUpperCase();
+            }
 
-					let fontSize = Math.min(120, w / 8);
-					ctx.font = 'bold ' + fontSize + 'px ' + styling.titleFont;
+            intelligentTitleWrap(title, maxWidth, ctx, spacing) {
+                const words = title.split(' ');
+                if (words.length === 1) return [title];
+                
+                const lines = [];
+                let currentLine = '';
+                
+                for (let word of words) {
+                    const testLine = currentLine ? `${currentLine} ${word}` : word;
+                    const testWidth = this.measureTextWithSpacing(ctx, testLine, spacing);
+                    
+                    if (testWidth <= maxWidth) {
+                        currentLine = testLine;
+                    } else {
+                        if (currentLine) lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                
+                if (currentLine) lines.push(currentLine);
+                return lines.slice(0, 2);
+            }
 
-					// CRITICAL: Add strict limits to prevent infinite loops
-					let displayTitle = title;
-					let iterationCount = 0;
-					const maxIterations = 20; // Reduced from 50
-					const minFontSize = 16; // Increased minimum
+            measureTextWithSpacing(ctx, text, spacing) {
+                if (!spacing || spacing === 0) return ctx.measureText(text).width;
+                
+                let totalWidth = 0;
+                const spaceWidth = ctx.measureText('M').width * spacing;
+                
+                for (let i = 0; i < text.length; i++) {
+                    totalWidth += ctx.measureText(text[i]).width;
+                    if (i < text.length - 1) {
+                        totalWidth += spaceWidth;
+                    }
+                }
+                
+                return totalWidth;
+            }
 
-					while (ctx.measureText(displayTitle).width > conservativeMaxWidth && 
-						   fontSize > minFontSize && 
-						   iterationCount < maxIterations) {
-						
-						fontSize -= 4; // Increased step size
-						ctx.font = 'bold ' + fontSize + 'px ' + styling.titleFont;
-						iterationCount++;
-						
-						// Early truncation if we're shrinking too much
-						if (fontSize <= 20 && displayTitle.length > 15) {
-							displayTitle = title.substring(0, 12) + '...';
-							fontSize = Math.max(20, minFontSize);
-							ctx.font = 'bold ' + fontSize + 'px ' + styling.titleFont;
-							break;
-						}
-						
-						// Safety break - if we've tried too many times, just truncate
-						if (iterationCount >= maxIterations - 2) {
-							displayTitle = title.substring(0, 10) + '...';
-							break;
-						}
-					}
+            renderTextWithSpacing(ctx, text, x, y, spacing) {
+                if (!spacing || spacing === 0) {
+                    ctx.fillText(text, x, y);
+                    return;
+                }
+                
+                const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
+                let currentX = x - (totalWidth / 2);
+                const spaceWidth = ctx.measureText('M').width * spacing;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const charWidth = ctx.measureText(char).width;
+                    
+                    ctx.fillText(char, currentX + (charWidth / 2), y);
+                    currentX += charWidth;
+                    
+                    if (i < text.length - 1) {
+                        currentX += spaceWidth;
+                    }
+                }
+            }
 
-					const titleLines = this.wrapText(ctx, displayTitle, w / 2, h * 0.15, conservativeMaxWidth, fontSize * 1.1);
+            strokeTextWithSpacing(ctx, text, x, y, spacing) {
+                if (!spacing || spacing === 0) {
+                    ctx.strokeText(text, x, y);
+                    return;
+                }
+                
+                const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
+                let currentX = x - (totalWidth / 2);
+                const spaceWidth = ctx.measureText('M').width * spacing;
+                
+                for (let i = 0; i < text.length; i++) {
+                    const char = text[i];
+                    const charWidth = ctx.measureText(char).width;
+                    
+                    ctx.strokeText(char, currentX + (charWidth / 2), y);
+                    currentX += charWidth;
+                    
+                    if (i < text.length - 1) {
+                        currentX += spaceWidth;
+                    }
+                }
+            }
 
-					// Limit to maximum 2 lines (reduced from 3)
-					const maxLines = 2;
-					const finalTitleLines = titleLines.slice(0, maxLines);
-					if (titleLines.length > maxLines) {
-						const lastLine = finalTitleLines[maxLines - 1];
-						finalTitleLines[maxLines - 1] = lastLine.length > 8 ? lastLine.substring(0, 8) + '...' : lastLine;
-					}
+            // PROFESSIONAL VISUAL EFFECTS
+            addProfessionalEffects(concept) {
+                const canvas = this.elements.canvas;
+                const ctx = this.ctx;
+                const styling = this.styling;
+                
+                if (styling.needsFilmGrain) {
+                    this.addFilmGrain(ctx, canvas.width, canvas.height, 0.1);
+                }
+                
+                if (styling.needsVignette) {
+                    this.addVignette(ctx, canvas.width, canvas.height);
+                }
+                
+                this.addEraOverlays(concept.decade);
+            }
 
-					// Render the title
-					ctx.shadowColor = styling.titleGlow;
-					ctx.shadowBlur = Math.max(fontSize / 4, 15);
+            addFilmGrain(ctx, width, height, intensity = 0.1) {
+                ctx.save();
+                ctx.globalAlpha = intensity;
+                ctx.globalCompositeOperation = 'overlay';
+                
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const noise = Math.random() * 255;
+                    data[i] = noise;
+                    data[i + 1] = noise;
+                    data[i + 2] = noise;
+                    data[i + 3] = 255 * intensity;
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                ctx.restore();
+            }
 
-					if (concept.decade === '1980s' || (concept.genre || '').toLowerCase().includes('sci-fi')) {
-						ctx.strokeStyle = styling.titleGlow;
-						ctx.lineWidth = 3;
-						for (let i = 0; i < finalTitleLines.length; i++) {
-							const line = finalTitleLines[i];
-							const yOffset = (i - (finalTitleLines.length - 1) / 2) * fontSize * 1.1;
-							ctx.strokeText(line, w / 2, h * 0.15 + yOffset);
-						}
-					}
+            addVignette(ctx, width, height) {
+                ctx.save();
+                
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = Math.max(width, height) * 0.7;
+                
+                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+                ctx.restore();
+            }
 
-					ctx.fillStyle = styling.titleColor;
-					for (let i = 0; i < finalTitleLines.length; i++) {
-						const line = finalTitleLines[i];
-						const yOffset = (i - (finalTitleLines.length - 1) / 2) * fontSize * 1.1;
-						ctx.fillText(line, w / 2, h * 0.15 + yOffset);
-					}
-					ctx.shadowBlur = 0;
-					
-				} catch (error) {
-					console.error('Error rendering title:', error);
-				}
-			}
+            addEraOverlays(decade) {
+                const ctx = this.ctx;
+                const { width: w, height: h } = this.elements.canvas;
+                
+                ctx.save();
+                ctx.globalAlpha = 0.1;
+                
+                switch (decade) {
+                    case '1950s':
+                    case '1960s':
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+                        for (let i = 0; i < w; i += 12) {
+                            ctx.fillRect(i, 0, 1, h);
+                        }
+                        break;
+                        
+                    case '1970s':
+                        ctx.fillStyle = 'rgba(255, 165, 0, 0.08)';
+                        for (let y = 0; y < h; y += 50) {
+                            ctx.fillRect(0, y, w, 2);
+                        }
+                        break;
+                        
+                    case '1980s':
+                        ctx.fillStyle = 'rgba(0, 255, 255, 0.04)';
+                        for (let y = 0; y < h; y += 4) {
+                            ctx.fillRect(0, y, w, 1);
+                        }
+                        break;
+                        
+                    case '2000s':
+                        if (Math.random() > 0.7) {
+                            ctx.fillStyle = 'rgba(0, 255, 0, 0.03)';
+                            for (let x = 0; x < w; x += 20) {
+                                ctx.fillRect(x, 0, 1, h);
+                            }
+                        }
+                        break;
+                }
+                
+                ctx.restore();
+            }
 
+            // ENHANCED INFO UPDATE
             updateInfo(concept) {
                 if (this.elements.decadeText) this.elements.decadeText.textContent = concept.decade || '-';
                 if (this.elements.genreText) this.elements.genreText.textContent = concept.genre || '-';
@@ -1323,70 +1310,95 @@
                 if (this.elements.taglineText) this.elements.taglineText.textContent = concept.tagline || '-';
                 if (this.elements.synopsisText) this.elements.synopsisText.textContent = concept.synopsis || '-';
                 
-                this.generateInstagramCaption(concept);
-                this.generateAISongRecommendation(concept);
+                this.generateProfessionalInstagramCaption(concept);
+                
+                console.log('📝 Movie info updated with professional details');
             }
-
-            generateInstagramCaption(concept) {
+            
+            generateProfessionalInstagramCaption(concept) {
                 if (!concept.title) {
                     this.elements.instagramCaption.value = '';
                     this.elements.copyCaptionBtn.disabled = true;
                     return;
                 }
 
-                let caption = '';
-                caption += '🎬 New AI-generated movie poster alert! ✨\n\n';
-                caption += '🎽️ "' + concept.title + '" (' + (concept.decade || 'Unknown Era') + ')\n';
-                caption += '🎭 ' + (concept.tagline || 'An unforgettable cinematic experience') + '\n\n';
+                const emojis = {
+                    'Horror': '👻🎭💀',
+                    'Sci-Fi': '🚀🌌👽',
+                    'Fusion': '🎭🌌💀'
+                };
+
+                const genreEmoji = emojis[concept.genre] || '🎬';
                 
-                const shortSynopsis = concept.synopsis ? 
-                    (concept.synopsis.length > 120 ? concept.synopsis.substring(0, 120) + '...' : concept.synopsis) :
-                    'A groundbreaking film that will leave you on the edge of your seat.';
-                caption += shortSynopsis + '\n\n';
+                let caption = '';
+                caption += `${genreEmoji} POSTER DROP: "${concept.title}" ${genreEmoji}\n\n`;
+                caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• Surreal Vibes' : ''}\n`;
+                caption += `💫 "${concept.tagline}"\n\n`;
+                
+                const synopsis = concept.synopsis ? 
+                    (concept.synopsis.length > 140 ? concept.synopsis.substring(0, 140) + '...' : concept.synopsis) :
+                    'A cinematic journey that challenges perception and reality.';
+                caption += `📖 ${synopsis}\n\n`;
                 
                 if (concept.cast && concept.cast.length > 0) {
-                    caption += '⭐ Starring: ' + concept.cast.slice(0, 2).join(', ') + '\n';
-                }
-                if (concept.director) {
-                    caption += '🎥 Directed by: ' + concept.director + '\n';
+                    const mainCast = concept.cast.slice(0, 3).map(actor => 
+                        actor.split(' AS ')[0].trim()
+                    ).join(' • ');
+                    caption += `⭐ Starring: ${mainCast}\n`;
                 }
                 
-                caption += '\n🤖 Created with AI • What movie should I generate next?\n\n';
-                caption += this.generateHashtags(concept);
+                if (concept.director) {
+                    caption += `🎥 Directed by: ${concept.director}\n`;
+                }
+                
+                caption += `\n🤖 Generated with AI • What era should I explore next?\n\n`;
+                caption += this.generateProfessionalHashtags(concept);
 
                 this.elements.instagramCaption.value = caption;
                 this.elements.copyCaptionBtn.disabled = false;
             }
-
-            generateHashtags(concept) {
-                const tags = [
-                    '#AIart', '#MoviePoster', '#GenerativeAI', '#FilmDesign',
-                    '#CinematicArt', '#ArtificialIntelligence', '#DigitalArt', '#MovieMagic'
+            
+            generateProfessionalHashtags(concept) {
+                const baseTags = [
+                    '#MoviePoster', '#AIArt', '#FilmDesign', '#CinematicArt',
+                    '#GenerativeAI', '#PosterDesign', '#ArtificialIntelligence',
+                    '#MovieMagic', '#FilmArt', '#PosterArt'
                 ];
                 
                 if (concept.genre) {
                     const genreLower = concept.genre.toLowerCase();
                     if (genreLower.includes('horror')) {
-                        tags.push('#Horror', '#ScaryMovies', '#HorrorArt');
+                        baseTags.push('#Horror', '#HorrorPoster', '#ScaryMovies', '#HorrorArt');
                     }
                     if (genreLower.includes('sci-fi')) {
-                        tags.push('#SciFi', '#ScienceFiction', '#Futuristic');
+                        baseTags.push('#SciFi', '#ScienceFiction', '#Futuristic', '#SciFiArt');
                     }
                 }
                 
                 if (concept.decade) {
-                    tags.push('#' + concept.decade);
-                    if (concept.decade === '1980s') {
-                        tags.push('#Retro', '#80sAesthetic', '#Neon');
-                    }
-                    if (concept.decade === '1950s') {
-                        tags.push('#Vintage', '#Classic');
+                    baseTags.push(`#${concept.decade.replace('s', '')}`);
+                    const decadeMap = {
+                        '1950s': ['#Vintage', '#Classic', '#RetroStyle'],
+                        '1960s': ['#Sixties', '#ModStyle', '#Retro'],
+                        '1970s': ['#Seventies', '#VintageStyle', '#RetroAesthetic'],
+                        '1980s': ['#Eighties', '#Retro', '#NeonAesthetic', '#Synthwave'],
+                        '1990s': ['#Nineties', '#90sAesthetic', '#Nostalgia'],
+                        '2000s': ['#Y2K', '#2000sAesthetic', '#Millennium'],
+                        '2010s': ['#2010s', '#ModernClassic'],
+                        '2020s': ['#Contemporary', '#ModernArt', '#CurrentCinema']
+                    };
+                    
+                    if (decadeMap[concept.decade]) {
+                        baseTags.push(...decadeMap[concept.decade]);
                     }
                 }
                 
-                tags.push('#PosterDesign', '#ConceptArt', '#Cinema', '#Entertainment');
+                baseTags.push(
+                    '#ConceptArt', '#VisualDesign', '#CreativeAI',
+                    '#DigitalArt', '#ArtDirection', '#FilmIndustry'
+                );
                 
-                return tags.slice(0, 30).join(' ');
+                return baseTags.slice(0, 28).sort(() => Math.random() - 0.5).join(' ');
             }
 
             async copyInstagramCaption() {
@@ -1574,6 +1586,11 @@
                 if (this.elements.errorMessage) this.elements.errorMessage.classList.add('hidden');
             }
 
+            clearError() {
+                this.hideError();
+                this.updateStatus('ready', 'Ready');
+            }
+
             setLoadingState(isLoading) {
                 this.isGenerating = isLoading;
                 this.elements.generateBtn.disabled = isLoading;
@@ -1620,14 +1637,6 @@
                 if (statusText) {
                     statusText.textContent = text;
                 }
-            }
-
-            addToRecent(imageUrl, concept) {
-                this.recentPosters.unshift({ imageUrl: imageUrl, concept: concept, timestamp: Date.now() });
-                if (this.recentPosters.length > 6) {
-                    this.recentPosters.pop();
-                }
-                this.updateRecentDisplay();
             }
 
             updateRecentDisplay() {
@@ -1747,98 +1756,156 @@
                 }
             }
 
-			async handleGeneration() {
-			  try {
-				this.clearError?.();
-				this.setLoadingState(true);
+            // UPDATED GENERATION FUNCTION
+            async handleGeneration() {
+                try {
+                    console.log('🎬 Starting professional poster generation...');
+                    this.clearError?.();
+                    this.setLoadingState(true);
 
-				// Concept
-				this.updateProgress('concept', 10);
-				const concept = await this.generateConcept();        // wrapper that calls generateMovieConcept()
-				if (!concept) { this.setLoadingState(false); return; }
-				this.currentConcept = concept;
-				this.updateInfo?.(concept);
+                    const concept = await this.generateConcept();
+                    if (!concept) { 
+                        this.setLoadingState(false); 
+                        return; 
+                    }
+                    
+                    console.log('✅ Concept generated:', concept.title);
+                    this.currentConcept = concept;
+                    this.updateInfo?.(concept);
 
-				// Image
-				this.updateProgress('image', 40);
-				const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
-				if (!baseImageUrl) { this.setLoadingState(false); return; }
+                    this.updateProgress('image', 35);
+                    const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
+                    if (!baseImageUrl) { 
+                        this.setLoadingState(false); 
+                        return; 
+                    }
+                    
+                    console.log('✅ Base image generated');
 
-				// Always normalize to a safe URL (blob:/data:) before drawing to canvas
-				const _safeForImg = normalizeToBlobUrl(baseImageUrl);
+                    this.updateProgress('text', 55);
+                    const safeImageUrl = normalizeToBlobUrl(baseImageUrl);
+                    await this.smartCropToInstagramRatio(safeImageUrl);
+                    
+                    console.log('✅ Image cropped and optimized');
 
-				// Crop & compose
-				this.updateProgress('text', 70);
-				await this.smartCropToInstagramRatio(_safeForImg);   // uses cover-fit, fills bg
-				this.addGradientOverlays?.();
-				await this.renderTitleAndCredits(concept);
+                    this.updateProgress('text', 65);
+                    this.addGradientOverlays?.();
+                    
+                    this.updateProgress('text', 75);
+                    await this.renderTitleAndCredits(concept);
+                    
+                    console.log('✅ Professional typography rendered');
 
-				// Optional soundtrack (non-fatal if fails)
-				if (typeof this.generateSong === 'function') {
-				  this.updateProgress('song', 85);
-				  try { await this.generateSong(concept); } catch (_) {}
-				}
+                    this.updateProgress('text', 85);
+                    this.addProfessionalEffects?.(concept);
+                    
+                    console.log('✅ Professional effects applied');
 
-				// Finalize
-				this.updateProgress('complete', 100);
-				const finalImageUrl = this.elements.canvas.toDataURL('image/png');
-				this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
+                    if (typeof this.generateAISongRecommendation === 'function') {
+                        this.updateProgress('song', 90);
+                        this.generateAISongRecommendation(concept).catch(err => {
+                            console.warn('Song generation failed:', err);
+                        });
+                    }
 
-				// Track recent
-				this.recentPosters = this.recentPosters || [];
-				this.recentPosters.unshift({ imageUrl: finalImageUrl, concept });
-				if (this.recentPosters.length > 12) this.recentPosters.pop();
+                    this.updateProgress('complete', 100);
+                    
+                    const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
+                    this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
 
-			  } catch (error) {
-				console.error('Error in generation process:', error);
-				this.showError?.('Error in generation process: ' + (error?.message || error));
-			  } finally {
-				this.setLoadingState(false);
-			  }
-			}
-			
-			// --- add this inside class EnhancedPosterAI ---
+                    this.generationCount++;
+                    if (this.elements.generationCounter) {
+                        const plural = this.generationCount === 1 ? 'poster' : 'posters';
+                        this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
+                    }
 
-			/** Wrapper so handleGeneration() doesn't break */
-			async generateConcept() {
-			  // keep progress UI consistent with generateMovieConcept
-			  return await this.generateMovieConcept();
-			}
+                    if (!this.recentPosters) this.recentPosters = [];
+                    this.recentPosters.unshift({ 
+                        imageUrl: finalImageUrl, 
+                        concept,
+                        timestamp: Date.now()
+                    });
+                    
+                    if (this.recentPosters.length > 12) {
+                        this.recentPosters = this.recentPosters.slice(0, 12);
+                    }
+                    
+                    this.updateRecentDisplay?.();
 
-			/** Compose a concise visual brief for the image API from the concept + filters */
-			buildVisualIntent(concept) {
-			  // pull active filters from the UI (already in DOM)
-			  const genrePref = this.elements.genreFilter?.value || 'any';
-			  const eraPref   = this.elements.eraFilter?.value || concept.decade || 'any';
-			  const artStyle  = this.elements.artStyleFilter?.value || 'authentic';
+                    console.log('🎉 Professional poster generation complete!');
+                    
+                    if (this.autoGenerate) {
+                        setTimeout(() => {
+                            this.startAutoTimer?.();
+                        }, 1000);
+                    }
 
-			  // construct a compact description the /api/generate-image endpoint can use
-			  // (string is fine because your IMAGE API treats "visualElements" as a prompt-like field)
-			  const bits = [
-				concept?.title ? `Title: ${concept.title}` : null,
-				concept?.genre ? `Genre: ${concept.genre}` : null,
-				concept?.decade ? `Era: ${concept.decade}` : null,
-				concept?.tagline ? `Tagline: ${concept.tagline}` : null,
-				concept?.synopsis ? `Synopsis: ${concept.synopsis}` : null,
-				`Target Era Preference: ${eraPref}`,
-				`Genre Preference: ${genrePref}`,
-				`Art Style: ${artStyle} (poster, cinematic, high detail)`,
-				`Framing: portrait, center-focused subject, movie poster composition`,
-				`Texture: print grain / paper fiber if era<2000, clean modern otherwise`,
-				`No text in image (titles/credits will be drawn later)`
-			  ].filter(Boolean);
+                } catch (error) {
+                    console.error('❌ Error in professional generation process:', error);
+                    this.showError?.('Generation failed: ' + (error?.message || 'Unknown error'));
+                } finally {
+                    this.setLoadingState(false);
+                }
+            }
 
-			  return bits.join('\n');
-			}
+            async generateConcept() {
+                return await this.generateMovieConcept();
+            }
 
-			/** Clear any visible error (handleGeneration calls clearError?.()) */
-			clearError() {
-			  this.hideError?.();
-			  // also reset status if needed
-			  this.updateStatus?.('ready', 'Ready');
-			}
+            buildVisualIntent(concept) {
+                const genrePref = this.elements.genreFilter?.value || 'any';
+                const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
+                const artStyle = this.elements.artStyleFilter?.value || 'authentic';
+                
+                const professionalSpecs = [
+                    `Professional movie poster for "${concept.title}"`,
+                    `Genre: ${concept.genre || 'cinematic thriller'}`,
+                    `Era: ${concept.decade || '1980s'} authentic style`,
+                    `Mood: ${concept.tagline || 'atmospheric and engaging'}`,
+                    `Story: ${concept.synopsis || 'compelling narrative'}`,
+                    
+                    'High-end movie poster composition',
+                    'Portrait orientation, cinematic framing',
+                    'Professional studio lighting',
+                    'Dramatic depth of field',
+                    'Rich color palette with strong contrast',
+                    
+                    this.getStyleDescription(artStyle, eraPref),
+                    
+                    'Premium poster quality',
+                    'Theatrical release standard',
+                    'Sharp focus on main subject',
+                    'Professional color grading',
+                    'No text or titles in image',
+                    'Clean composition for text overlay',
+                    
+                    'PG-13 rating appropriate',
+                    'No graphic violence or gore',
+                    'Professional and tasteful presentation'
+                ];
 
+                return professionalSpecs.filter(Boolean).join('. ');
+            }
 
+            getStyleDescription(artStyle, era) {
+                const styleMap = {
+                    'authentic': {
+                        '1950s': 'hand-painted movie poster art, vintage lithograph style',
+                        '1960s': 'mod graphic design, bold geometric shapes',
+                        '1970s': 'airbrushed illustration, warm earth tones',
+                        '1980s': 'painted character montage, neon highlights',
+                        '1990s': 'photo-composite style, matte finish',
+                        '2000s': 'digital photography composite, clean gradients',
+                        '2010s': 'minimalist poster design, negative space',
+                        '2020s': 'contemporary digital art, refined aesthetic'
+                    },
+                    'b-movie': 'exaggerated B-movie poster style, bold dramatic composition',
+                    'photo': 'modern photographic poster, professional studio photography',
+                    'painted': 'classic painted movie poster art, traditional illustration'
+                };
+
+                return styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie poster style';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', function() {
