@@ -87,6 +87,34 @@
             .floating {
                 animation: none;
             }
+
+            generateProfessionalCast(concept) {
+                if (concept.cast && concept.cast.length) {
+                    return concept.cast.slice(0, 4);
+                }
+                
+                const professionalNames = [
+                    'ELENA CROSS', 'MARCUS VALE', 'ZARA STORM', 'VINCENT KANE',
+                    'LUNA THORNE', 'DANTE RIVERS', 'IRIS BLAKE', 'PHOENIX STEEL',
+                    'NOVA FOX', 'ATLAS NIGHT', 'SAGE HUNTER', 'RAVEN COLE',
+                    'JADE WINTERS', 'ORION BLACK', 'RUBY SHARP', 'COLE GREY'
+                ];
+                
+                const shuffled = [...professionalNames].sort(() => Math.random() - 0.5);
+                return shuffled.slice(0, 4);
+            }
+
+            generateDirector() {
+                const directors = [
+                    'CAMERON WELLS', 'JORDAN CROSS', 'ALEX NOVA', 'MORGAN STEEL',
+                    'RILEY STORM', 'CASEY NIGHT', 'DREW HUNTER', 'SAGE RIVERS'
+                ];
+                return directors[Math.floor(Math.random() * directors.length)];
+            }
+
+            cleanActorName(actor) {
+                return String(actor).split(' AS ')[0].trim().toUpperCase();
+            }
             
             .glass-morphism {
                 backdrop-filter: blur(5px);
