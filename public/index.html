@@ -1891,35 +1891,43 @@
 				const artStyle = this.elements.artStyleFilter?.value || 'authentic';
 				
 				// ENHANCED TEXT PREVENTION - Multiple strategies
-				const textPreventionPrompts = [
-					// Primary prevention
-					'NO TEXT OR TITLES IN IMAGE',
-					'NO WRITTEN WORDS OR LETTERS VISIBLE',
-					'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
-					'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
-					
-					// Secondary prevention  
-					'no movie titles visible',
-					'no credits or cast names shown',
-					'no taglines or slogans in image',
-					'no studio logos or watermarks',
-					
-					// Tertiary prevention
-					'image ready for custom text overlay',
-					'blank poster template style',
-					'visual elements only, no typography'
-				];
+			const textPreventionPrompts = [
+				// Primary prevention
+				'NO TEXT OR TITLES IN IMAGE',
+				'NO WRITTEN WORDS OR LETTERS VISIBLE', 
+				'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
+				'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
 				
+				// Secondary prevention  
+				'no movie titles visible',
+				'no credits or cast names shown',
+				'no taglines or slogans in image',
+				'no studio logos or watermarks',
+				
+				// Tertiary prevention
+				'image ready for custom text overlay',
+				'blank poster template style',
+				'visual elements only, no typography',
+				
+				// Artwork composition (NOT poster photo)
+				'flat artwork composition',
+				'direct front view',
+				'no perspective or 3D effects',
+				'straight-on illustration',
+				'key art style',
+				'concept art rendering',
+				'NOT a photograph of a poster'
+			];				
 				// Enhanced visual specifications with stronger text prevention
 				const professionalSpecs = [
-					`Professional movie poster concept for "${concept.title}"`,
+					`Professional cinematic illustration for "${concept.title}"`,
 					`Genre: ${concept.genre || 'cinematic thriller'}`,
 					`Era: ${concept.decade || '1980s'} authentic visual style`,
 					`Mood: ${concept.tagline || 'atmospheric and engaging'}`,
 					`Visual story: ${concept.synopsis || 'compelling narrative'}`,
 					
 					// Technical specifications with text prevention
-					'High-end movie poster composition WITHOUT ANY TEXT',
+					'High-end movie artwork composition WITHOUT ANY TEXT',
 					'Portrait orientation, cinematic framing',
 					'Professional studio lighting setup',
 					'Dramatic depth of field photography',
@@ -1929,7 +1937,7 @@
 					this.getEnhancedStyleDescription(artStyle, eraPref),
 					
 					// Quality requirements with text emphasis
-					'Premium poster quality visual elements only',
+					'Premium movie key art visual elements only',
 					'Theatrical release standard imagery',
 					'Sharp focus on main subject without text',
 					'Professional color grading and composition',
@@ -1955,21 +1963,21 @@
 			getEnhancedStyleDescription(artStyle, era) {
 				const styleMap = {
 					'authentic': {
-						'1950s': 'hand-painted movie poster artwork without text, vintage lithograph visual style',
+						'1950s': 'hand-painted movie artwork without text, vintage lithograph visual style',
 						'1960s': 'mod graphic design elements without text, bold geometric visual shapes',
 						'1970s': 'airbrushed illustration style without text, warm earth tone visuals',
 						'1980s': 'painted character montage without text, neon visual highlights',
 						'1990s': 'photo-composite visual style without text, matte finish photography',
 						'2000s': 'digital photography composite without text, clean visual gradients',
-						'2010s': 'minimalist poster design without text, negative space composition',
+						'2010s': 'minimalist movie art design without text, negative space composition',
 						'2020s': 'contemporary digital art without text, refined visual aesthetic'
 					},
-					'b-movie': 'exaggerated B-movie poster visual style without text, bold dramatic composition ready for custom titles',
-					'photo': 'modern photographic poster composition without text, professional studio photography ready for overlay',
-					'painted': 'classic painted movie poster artwork without text, traditional illustration style ready for custom typography'
+					'b-movie': 'exaggerated B-movie key art visual style without text, bold dramatic composition ready for custom titles',
+					'photo': 'modern photographic movie art composition without text, professional studio photography ready for overlay',
+					'painted': 'classic painted movie artwork without text, traditional illustration style ready for custom typography'
 				};
 
-				const baseDescription = styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie poster visual style without text';
+				const baseDescription = styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie key art visual style without text';
 				return baseDescription + ', specifically designed for custom text overlay';
 			}	
 		}	
