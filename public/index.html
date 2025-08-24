@@ -239,31 +239,6 @@
                             <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Synopsis</label>
                             <p id="synopsis-text" class="text-sm text-gray-200 leading-relaxed">-</p>
                         </div>
-                        <div class="border-l-4 border-pink-500 pl-4">
-                            <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Instagram Caption</label>
-                            <div class="bg-gray-800 p-3 rounded-lg mt-2">
-                                <textarea id="instagram-caption" class="w-full bg-transparent text-xs text-gray-300 resize-none border-none outline-none" rows="6" readonly placeholder="Generate a poster to see Instagram caption..."></textarea>
-                                <button id="copy-caption-btn" class="mt-2 px-3 py-1 bg-pink-600 hover:bg-pink-700 rounded text-xs transition-all disabled:opacity-50" disabled>
-                                    Copy Caption
-                                </button>
-                            </div>
-                        </div>
-                        <div class="border-l-4 border-indigo-500 pl-4">
-                            <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Soundtrack Recommendation</label>
-                            <div class="bg-gray-800 p-3 rounded-lg mt-2">
-                                <div class="flex items-center space-x-2 mb-2">
-                                    <span class="text-lg">🎵</span>
-                                    <div>
-                                        <p id="song-title" class="text-sm font-medium text-white">-</p>
-                                        <p id="song-artist" class="text-xs text-gray-400">-</p>
-                                    </div>
-                                </div>
-                                <p id="song-reason" class="text-xs text-gray-300 italic">-</p>
-                                <button id="copy-song-btn" class="mt-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 rounded text-xs transition-all disabled:opacity-50" disabled>
-                                    Copy Song Info
-                                </button>
-                            </div>
-                        </div>
                     </div>
                     
                     <div id="error-message" class="hidden bg-red-900/50 border border-red-500 text-red-300 px-4 py-3 rounded-lg mt-4">
@@ -283,42 +258,40 @@
 
     <canvas id="poster-canvas" class="hidden"></canvas>
 
-	<script>
-	// Normalize any image string into a safe URL for <img>.src (prevents blockers and canvas taint)
-	function normalizeToBlobUrl(maybeBase64OrUrl) {
-	  try {
-		let s = String(maybeBase64OrUrl || '');
-
-		// Already safe?
-		if (s.startsWith('blob:') || s.startsWith('data:')) return s;
-
-		// Raw base64 without prefix? Wrap it
-		if (!/^https?:\/\//i.test(s) && !s.startsWith('data:')) {
-		  s = 'data:image/png;base64,' + s;
-		}
-
-		// If still http(s), leave it (server handles CORS/base64); otherwise convert data: → blob:
-		if (!s.startsWith('data:')) return s;
-
-		const comma = s.indexOf(',');
-		const header = s.slice(0, comma);
-		const b64 = s.slice(comma + 1);
-		const mimeMatch = /data:(.*?);base64/i.exec(header);
-		const mime = (mimeMatch && mimeMatch[1]) || 'image/png';
-
-		const bin = atob(b64);
-		const bytes = new Uint8Array(bin.length);
-		for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-
-		return URL.createObjectURL(new Blob([bytes], { type: mime }));
-	  } catch (e) {
-		console.warn('normalizeToBlobUrl failed:', e);
-		return maybeBase64OrUrl;
-	  }
-	}
-	</script>
-
     <script>
+        // Normalize any image string into a safe URL for <img>.src (prevents blockers and canvas taint)
+        function normalizeToBlobUrl(maybeBase64OrUrl) {
+            try {
+                let s = String(maybeBase64OrUrl || '');
+
+                // Already safe?
+                if (s.startsWith('blob:') || s.startsWith('data:')) return s;
+
+                // Raw base64 without prefix? Wrap it
+                if (!/^https?:\/\//i.test(s) && !s.startsWith('data:')) {
+                    s = 'data:image/png;base64,' + s;
+                }
+
+                // If still http(s), leave it (server handles CORS/base64); otherwise convert data: → blob:
+                if (!s.startsWith('data:')) return s;
+
+                const comma = s.indexOf(',');
+                const header = s.slice(0, comma);
+                const b64 = s.slice(comma + 1);
+                const mimeMatch = /data:(.*?);base64/i.exec(header);
+                const mime = (mimeMatch && mimeMatch[1]) || 'image/png';
+
+                const bin = atob(b64);
+                const bytes = new Uint8Array(bin.length);
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+                return URL.createObjectURL(new Blob([bytes], { type: mime }));
+            } catch (e) {
+                console.warn('normalizeToBlobUrl failed:', e);
+                return maybeBase64OrUrl;
+            }
+        }
+
         class EnhancedPosterAI {
             constructor() {
                 console.log('EnhancedPosterAI constructor called');
@@ -328,7 +301,6 @@
                     : window.location.origin;
                 this.CONCEPT_API_URL = this.BACKEND_BASE_URL + '/api/generate-concept';
                 this.IMAGE_API_URL = this.BACKEND_BASE_URL + '/api/generate-image';
-                this.SONG_API_URL = this.BACKEND_BASE_URL + '/api/generate-song';
                 
                 this.isGenerating = false;
                 this.autoGenerate = false;
@@ -339,8 +311,9 @@
                 
                 this.initializeElements();
                 this.setupEventListeners();
+                this.setupCanvas();
                 this.checkBackendHealth();
-           }
+            }
 
             initializeElements() {
                 console.log('Initializing DOM elements...');
@@ -357,12 +330,6 @@
                     titleText: document.getElementById('title-text'),
                     taglineText: document.getElementById('tagline-text'),
                     synopsisText: document.getElementById('synopsis-text'),
-                    instagramCaption: document.getElementById('instagram-caption'),
-                    copyCaptionBtn: document.getElementById('copy-caption-btn'),
-                    songTitle: document.getElementById('song-title'),
-                    songArtist: document.getElementById('song-artist'),
-                    songReason: document.getElementById('song-reason'),
-                    copySongBtn: document.getElementById('copy-song-btn'),
                     
                     autoToggle: document.getElementById('auto-toggle'),
                     nodToggle: document.getElementById('nod-toggle'),
@@ -384,44 +351,25 @@
                     canvas: document.getElementById('poster-canvas')
                 };
                 
-                this.ctx = this.elements.canvas.getContext('2d');
                 this.nodTheme = false;
                 console.log('DOM elements initialized');
-                this.setupCanvasForHighDPI();
             }
 
-            setupCanvasForHighDPI() {
+            setupCanvas() {
                 const canvas = this.elements.canvas;
-                const ctx = this.ctx;
+                this.ctx = canvas.getContext('2d');
                 
-                // Get device pixel ratio
-                const dpr = window.devicePixelRatio || 1;
+                // Set canvas size
+                canvas.width = 1024;
+                canvas.height = 1280; // 4:5 ratio for Instagram
                 
-                // Store original canvas size
-                this.originalCanvasSize = {
-                    width: canvas.width,
-                    height: canvas.height
-                };
-                
-                // Scale canvas for high DPI if needed
-                if (dpr > 1) {
-                    canvas.width = canvas.width * dpr;
-                    canvas.height = canvas.height * dpr;
-                    ctx.scale(dpr, dpr);
-                    
-                    // Update canvas style size
-                    canvas.style.width = this.originalCanvasSize.width + 'px';
-                    canvas.style.height = this.originalCanvasSize.height + 'px';
+                // Enable high-quality rendering
+                this.ctx.imageSmoothingEnabled = true;
+                if (this.ctx.imageSmoothingQuality) {
+                    this.ctx.imageSmoothingQuality = 'high';
                 }
                 
-                // Set text rendering optimization
-                ctx.textRenderingOptimization = 'optimizeQuality';
-                if (ctx.imageSmoothingEnabled !== undefined) {
-                    ctx.imageSmoothingEnabled = true;
-                    if (ctx.imageSmoothingQuality) {
-                        ctx.imageSmoothingQuality = 'high';
-                    }
-                }
+                console.log('Canvas initialized:', canvas.width, 'x', canvas.height);
             }
 
             setupEventListeners() {
@@ -442,18 +390,6 @@
                         knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
                     });
                 }
-                
-                this.elements.genreFilter.addEventListener('change', function() {
-                    console.log('Genre filter changed to:', self.elements.genreFilter.value);
-                });
-                this.elements.eraFilter.addEventListener('change', function() {
-                    console.log('Era filter changed to:', self.elements.eraFilter.value);
-                });
-                this.elements.artStyleFilter.addEventListener('change', function() {
-                    console.log('Art style filter changed to:', self.elements.artStyleFilter.value);
-                });               
-                this.elements.copyCaptionBtn.addEventListener('click', function() { self.copyInstagramCaption(); });
-                this.elements.copySongBtn.addEventListener('click', function() { self.copySongInfo(); });
                 
                 console.log('Event listeners set up');
             }
@@ -499,7 +435,6 @@
                     'concept': 'Generating concept...',
                     'image': 'Creating artwork...',
                     'text': 'Composing poster...',
-                    'song': 'Finding perfect soundtrack...',
                     'complete': 'Complete!'
                 };
                 
@@ -511,50 +446,45 @@
                 }
             }
 
-			async generateMovieConcept() {
-				console.log("Generating movie concept with enhanced text prevention...");
-				this.updateProgress('concept', 10);
-				
-				const payload = {
-					genreFilter: this.elements.genreFilter.value,
-					eraFilter: this.elements.eraFilter.value,
-					nodTheme: this.nodTheme,
-					// Add specific text prevention flag
-					preventText: true
-				};
+            async generateMovieConcept() {
+                console.log("Generating movie concept...");
+                this.updateProgress('concept', 10);
+                
+                const payload = {
+                    genreFilter: this.elements.genreFilter.value,
+                    eraFilter: this.elements.eraFilter.value,
+                    nodTheme: this.nodTheme,
+                    preventText: true
+                };
 
-				try {
-					const response = await fetch(this.CONCEPT_API_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(payload)
-					});
+                try {
+                    const response = await fetch(this.CONCEPT_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-					const responseText = await response.text();
+                    const responseText = await response.text();
 
-					if (!response.ok) {
-						throw new Error('Request failed with status ' + response.status + ': ' + responseText);
-					}
+                    if (!response.ok) {
+                        throw new Error('Request failed with status ' + response.status + ': ' + responseText);
+                    }
 
-					const result = JSON.parse(responseText);
-					
-					if (result.success && result.concept) {
-						console.log("✅ Concept generated with text prevention:", result.concept);
-						this.updateProgress('concept', 30);
-						
-						// Log text prevention status
-						console.log('🚫 Text prevention measures applied to concept generation');
-						
-						return result.concept;
-					} else {
-						throw new Error(result.error || "Invalid response from backend");
-					}
-				} catch (error) {
-					console.error("Error generating concept:", error);
-					this.showError('Failed to generate concept: ' + error.message);
-					return null;
-				}
-			}
+                    const result = JSON.parse(responseText);
+                    
+                    if (result.success && result.concept) {
+                        console.log("✅ Concept generated:", result.concept);
+                        this.updateProgress('concept', 30);
+                        return result.concept;
+                    } else {
+                        throw new Error(result.error || "Invalid response from backend");
+                    }
+                } catch (error) {
+                    console.error("Error generating concept:", error);
+                    this.showError('Failed to generate concept: ' + error.message);
+                    return null;
+                }
+            }
 
             async generateImage(visualElements, concept) {
                 console.log("Generating image...");
@@ -581,7 +511,7 @@
                     const result = JSON.parse(responseText);
                     
                     if (result.success && result.imageUrl) {
-                        console.log("Image generated successfully.");
+                        console.log("✅ Image generated successfully");
                         this.updateProgress('image', 70);
                         return result.imageUrl;
                     } else {
@@ -594,205 +524,95 @@
                 }
             }
 
-            // ENHANCED ERA STYLING WITH PROFESSIONAL ENHANCEMENTS
-            getEraSpecificStyling(decade, genre) {
-                const isSciFi = (genre || '').toLowerCase().includes('sci-fi');
-                const isHorror = (genre || '').toLowerCase().includes('horror');
-                const isFusion = (genre || '').toLowerCase().includes('fusion');
+            buildVisualIntent(concept) {
+                const genrePref = this.elements.genreFilter?.value || 'any';
+                const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
+                const artStyle = this.elements.artStyleFilter?.value || 'authentic';
                 
-			const eraStyles = {
-				'1950s': {
-					titleFont: 'serif, "Times New Roman", Georgia',
-					letterSpacing: 0.05,
-					titleColor: isHorror ? '#d4af37' : '#f8f8ff',
-					titleGlow: isHorror ? 'rgba(212, 175, 55, 0.7)' : 'rgba(248, 248, 255, 0.6)',
-					glowIntensity: 8,
-					useChrome: false,
-					useStroke: false,
-					strokeWidth: 1,
-					taglineFont: '"Times New Roman", Georgia, serif',
-					creditsFont: '"Times New Roman", Georgia, serif',
-					titleWeight: '700',
-					professionalShadow: true
-				},
-				'1960s': {
-					titleFont: isSciFi ? '"Orbitron", "Courier New", monospace' : '"Bebas Neue", "Impact", sans-serif',
-					letterSpacing: isSciFi ? 0.12 : 0.08,
-					titleColor: isSciFi ? '#4dd0e1' : '#ffffff',
-					titleGlow: isSciFi ? 'rgba(77, 208, 225, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-					glowIntensity: isSciFi ? 12 : 8,
-					useChrome: false,
-					useStroke: isSciFi,
-					strokeWidth: 2,
-					taglineFont: '"Helvetica Neue", Arial, sans-serif',
-					creditsFont: '"Helvetica Neue", Arial, sans-serif',
-					titleWeight: '900',
-					professionalShadow: true
-				},
-				'1970s': {
-					titleFont: '"Bebas Neue", "Impact", "Arial Black", sans-serif',
-					letterSpacing: 0.06,
-					titleColor: isHorror ? '#ff6b47' : '#f4a261',
-					titleGlow: isHorror ? 'rgba(255, 107, 71, 0.9)' : 'rgba(244, 162, 97, 0.8)',
-					glowIntensity: 14,
-					useChrome: false,
-					useStroke: true,
-					strokeWidth: 3,
-					useDropShadow: true,
-					taglineFont: '"Arial", sans-serif',
-					creditsFont: '"Arial", sans-serif',
-					titleWeight: '900',
-					professionalShadow: true
-				},
-				'1980s': {
-					titleFont: '"Impact", "Bebas Neue", "Arial Black", sans-serif',
-					letterSpacing: isSciFi ? 0.18 : 0.12,
-					titleColor: isSciFi ? '#26c6da' : (isHorror ? '#e91e63' : '#ff7043'),
-					titleGlow: isSciFi ? 'rgba(38, 198, 218, 0.9)' : (isHorror ? 'rgba(233, 30, 99, 0.9)' : 'rgba(255, 112, 67, 0.9)'),
-					glowIntensity: 22,
-					useChrome: isSciFi,
-					useStroke: true,
-					strokeWidth: 4,
-					taglineFont: '"Arial", "Helvetica", sans-serif',
-					creditsFont: '"Arial", "Helvetica", sans-serif',
-					titleWeight: '900',
-					eighties: true,
-					professionalShadow: true
-				},
-				'1990s': {
-					titleFont: '"Montserrat", "Arial", "Helvetica", sans-serif',
-					letterSpacing: 0.04,
-					titleColor: isHorror ? '#cd5c5c' : '#f5f5f5',
-					titleGlow: isHorror ? 'rgba(205, 92, 92, 0.7)' : 'rgba(245, 245, 245, 0.7)',
-					glowIntensity: 6,
-					useChrome: false,
-					useStroke: false,
-					strokeWidth: 1,
-					taglineFont: '"Arial", "Helvetica", sans-serif',
-					creditsFont: '"Arial", "Helvetica", sans-serif',
-					titleWeight: '700',
-					subtle: true,
-					professionalShadow: true
-				},
-				'2000s': {
-					titleFont: '"Oswald", "Arial Narrow", "Arial", sans-serif',
-					letterSpacing: 0.06,
-					titleColor: isSciFi ? '#ff8a50' : '#ffffff',
-					titleGlow: isSciFi ? 'rgba(255, 138, 80, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-					glowIntensity: 10,
-					useChrome: false,
-					useStroke: isSciFi,
-					strokeWidth: 2,
-					taglineFont: '"Arial", "Helvetica", sans-serif',
-					creditsFont: '"Arial", "Helvetica", sans-serif',
-					titleWeight: '700',
-					matrix: isSciFi,
-					professionalShadow: true
-				},
-				'2010s': {
-					titleFont: '"Poppins", "Helvetica Neue", "Arial", sans-serif',
-					letterSpacing: 0.03,
-					titleColor: isSciFi ? '#64b5f6' : '#ffffff',
-					titleGlow: isSciFi ? 'rgba(100, 181, 246, 0.6)' : 'rgba(255, 255, 255, 0.7)',
-					glowIntensity: 8,
-					useChrome: false,
-					useStroke: false,
-					strokeWidth: 1,
-					taglineFont: '"Helvetica Neue", "Arial", sans-serif',
-					creditsFont: '"Helvetica Neue", "Arial", sans-serif',
-					titleWeight: '600',
-					modern: true,
-					professionalShadow: true
-				},
-				'2020s': {
-					titleFont: '"Montserrat", "Helvetica Neue", "Arial", sans-serif',
-					letterSpacing: 0.02,
-					titleColor: isSciFi ? '#81c784' : '#ffffff',
-					titleGlow: isSciFi ? 'rgba(129, 199, 132, 0.6)' : 'rgba(0, 0, 0, 0.8)',
-					glowIntensity: 4,
-					useChrome: false,
-					useStroke: false,
-					strokeWidth: 1,
-					taglineFont: '"Helvetica Neue", "Arial", sans-serif',
-					creditsFont: '"Helvetica Neue", "Arial", sans-serif',
-					titleWeight: '500',
-					contemporary: true,
-					professionalShadow: true
-				}
-			};
+                // Enhanced text prevention prompts
+                const textPreventionPrompts = [
+                    'NO TEXT OR TITLES IN IMAGE',
+                    'NO WRITTEN WORDS OR LETTERS VISIBLE', 
+                    'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
+                    'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
+                    'no movie titles visible',
+                    'no credits or cast names shown',
+                    'no taglines or slogans in image',
+                    'image ready for custom text overlay'
+                ];
                 
-                const style = eraStyles[decade] || eraStyles['1980s'];
-                
-                // Professional enhancements for all eras
-                return {
-                    ...style,
-                    titleMargin: 0.08,
-                    maxTitleWidth: 0.88,
-                    taglineColor: 'rgba(255, 255, 255, 0.9)',
-                    creditsColor: 'rgba(255, 255, 255, 0.95)',
+                const professionalSpecs = [
+                    `Professional cinematic illustration for "${concept.title}"`,
+                    `Genre: ${concept.genre || 'cinematic thriller'}`,
+                    `Era: ${concept.decade || '1980s'} authentic visual style`,
+                    `Visual story: ${concept.synopsis || 'compelling narrative'}`,
+                    'High-end movie artwork composition WITHOUT ANY TEXT',
+                    'Portrait orientation, cinematic framing',
+                    'Professional studio lighting setup',
+                    'Rich color palette with strong visual contrast',
+                    ...textPreventionPrompts,
+                    'Premium movie key art visual elements only',
+                    'PG-13 rating appropriate content',
+                    'Professional and tasteful visual presentation'
+                ];
+
+                const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
+                    '. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
                     
-                    // Professional typography settings
-                    titleLineHeight: 0.9,
-                    taglineSize: 0.25, // Relative to title size
-                    castSize: 0.05, // Relative to canvas width
-                    directorSize: 0.04,
-                    metadataSize: 0.03,
-                    
-                    // Enhanced visual effects
-                    multiLayerGlow: style.glowIntensity > 15,
-                    professionalShadows: true,
-                    textOutlineColor: 'rgba(0, 0, 0, 0.8)',
-                    
-                    // Era-specific enhancements
-                    needsFilmGrain: decade <= '1990s',
-                    needsVignette: true,
-                    colorTemperature: isSciFi ? 'cool' : (isHorror ? 'warm' : 'neutral')
-                };
+                console.log('🚫 Enhanced text prevention prompt generated');
+                return finalPrompt;
             }
 
-            smartCropToInstagramRatio(imageUrl) {
-                const self = this;
-                return new Promise((resolve) => {
-                    try {
-                        const img = new Image();
-                        img.crossOrigin = 'anonymous';
-                        img.onerror = () => { console.warn('Image load failed:', imageUrl); resolve(); };
-
-                        img.onload = function () {
-                            const canvas = self.elements.canvas;
-                            const ctx = self.ctx;
-
-                            const isMobile = window.innerWidth <= 768;
-                            const targetW = isMobile ? 512 : 1024;
-
-                            const aspect = (typeof self.aspectRatio === 'number' && self.aspectRatio > 0) ? self.aspectRatio : 1.25;
-                            const targetH = Math.floor(targetW * aspect);
-
-                            canvas.width = targetW;
-                            canvas.height = targetH;
-                            ctx.clearRect(0, 0, targetW, targetH);
-                            ctx.fillStyle = '#000';
-                            ctx.fillRect(0, 0, targetW, targetH);
-
-                            if (ctx.imageSmoothingEnabled !== undefined) {
-                                ctx.imageSmoothingEnabled = true;
-                                if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
-                            }
-
-                            const scale = Math.max(targetW / img.width, targetH / img.height);
-                            const sWidth  = targetW / scale;
-                            const sHeight = targetH / scale;
-                            const sx = Math.max(0, (img.width  - sWidth)  / 2);
-                            const sy = Math.max(0, (img.height - sHeight) / 2);
-
-                            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
+            async loadImageToCanvas(imageUrl) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.crossOrigin = 'anonymous';
+                    
+                    img.onload = () => {
+                        try {
+                            const canvas = this.elements.canvas;
+                            const ctx = this.ctx;
+                            
+                            console.log('📐 Canvas dimensions:', canvas.width, 'x', canvas.height);
+                            console.log('📐 Image dimensions:', img.width, 'x', img.height);
+                            
+                            // Clear canvas
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Fill with black background
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            
+                            // Calculate scaling to fit image in canvas while maintaining aspect ratio
+                            const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                            const scaledWidth = img.width * scale;
+                            const scaledHeight = img.height * scale;
+                            
+                            // Center the image
+                            const x = (canvas.width - scaledWidth) / 2;
+                            const y = (canvas.height - scaledHeight) / 2;
+                            
+                            console.log('📐 Scaled image:', scaledWidth, 'x', scaledHeight, 'at', x, ',', y);
+                            
+                            // Draw image to canvas
+                            ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+                            
+                            console.log('✅ Image loaded to canvas successfully');
                             resolve();
-                        };
-
-                        img.src = normalizeToBlobUrl(imageUrl);
-                    } catch (_) {
-                        resolve();
-                    }
+                            
+                        } catch (error) {
+                            console.error('❌ Error drawing image to canvas:', error);
+                            reject(error);
+                        }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error('❌ Error loading image:', error);
+                        reject(new Error('Failed to load image'));
+                    };
+                    
+                    // Use normalized URL to avoid CORS issues
+                    img.src = normalizeToBlobUrl(imageUrl);
                 });
             }
 
@@ -802,6 +622,7 @@
                 const w = canvas.width;
                 const h = canvas.height;
 
+                // Top gradient for title area
                 const topGradient = ctx.createLinearGradient(0, 0, 0, h * 0.25);
                 topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
                 topGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.3)');
@@ -809,506 +630,102 @@
                 ctx.fillStyle = topGradient;
                 ctx.fillRect(0, 0, w, h * 0.25);
 
+                // Bottom gradient for credits area
                 const bottomGradient = ctx.createLinearGradient(0, h, 0, h * 0.75);
                 bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
                 bottomGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.4)');
                 bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 ctx.fillStyle = bottomGradient;
                 ctx.fillRect(0, h * 0.75, w, h * 0.25);
+                
+                console.log('✅ Gradient overlays added');
             }
 
-            // PROFESSIONAL POSTER RENDERING SYSTEM
-            async renderTitleAndCredits(concept) {
+            renderTitleAndCredits(concept) {
                 const canvas = this.elements.canvas;
                 const ctx = this.ctx;
                 const w = canvas.width;
                 const h = canvas.height;
 
-                this.styling = this.getEraSpecificStyling(concept.decade, concept.genre);
-                const styling = this.styling;
-
-                this.renderProfessionalTitle(ctx, concept, w, h, styling);
-                this.renderProfessionalCredits(ctx, concept, w, h, styling);
-            }
-
-            renderProfessionalTitle(ctx, concept, w, h, styling) {
+                // Title settings
                 const titleText = (concept?.title || 'UNTITLED').toUpperCase();
                 const tagline = concept?.tagline || '';
                 
-                const baseSize = Math.min(w, h);
-                let titleSize = Math.min(Math.floor(baseSize / 8), 140);
-                const taglineSize = Math.floor(titleSize * 0.25);
+                // Calculate font sizes based on canvas size
+                let titleSize = Math.min(Math.floor(w / 8), 120);
+                const taglineSize = Math.floor(titleSize * 0.3);
                 
+                // Title positioning
                 const titleY = h * 0.15;
-                const maxTitleWidth = w * 0.85;
+                const maxTitleWidth = w * 0.9;
                 
-                ctx.font = `900 ${titleSize}px ${styling.titleFont}`;
+                // Render title with glow effect
+                ctx.save();
+                ctx.font = `900 ${titleSize}px "Bebas Neue", "Impact", sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
-                let titleWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
-                
+                // Check if title fits, reduce size if needed
+                let titleWidth = ctx.measureText(titleText).width;
                 while (titleWidth > maxTitleWidth && titleSize > 32) {
                     titleSize -= 4;
-                    ctx.font = `900 ${titleSize}px ${styling.titleFont}`;
-                    titleWidth = this.measureTextWithSpacing(ctx, titleText, styling.letterSpacing);
+                    ctx.font = `900 ${titleSize}px "Bebas Neue", "Impact", sans-serif`;
+                    titleWidth = ctx.measureText(titleText).width;
                 }
                 
-                const titleLines = this.intelligentTitleWrap(titleText, maxTitleWidth, ctx, styling.letterSpacing);
-                const lineHeight = titleSize * 1.1;
-                const totalTitleHeight = titleLines.length * lineHeight;
-                const titleStartY = titleY - (totalTitleHeight / 2);
+                // Title shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillText(titleText, w / 2 + 3, titleY + 3);
                 
-                titleLines.forEach((line, index) => {
-                    const yPos = titleStartY + (index * lineHeight);
-                    this.renderTitleWithProfessionalEffects(ctx, line, w / 2, yPos, titleSize, styling);
-                });
+                // Title glow
+                ctx.shadowColor = '#ffffff';
+                ctx.shadowBlur = 20;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(titleText, w / 2, titleY);
                 
+                ctx.restore();
+                
+                // Render tagline if exists
                 if (tagline) {
-                    const taglineY = titleStartY + totalTitleHeight + (titleSize * 0.4);
-                    this.renderTagline(ctx, tagline, w / 2, taglineY, taglineSize, styling);
-                }
-            }
-
-            renderTitleWithProfessionalEffects(ctx, text, x, y, fontSize, styling) {
-                ctx.save();
-                
-                this.renderTextShadow(ctx, text, x, y, fontSize, styling);
-                
-                if (styling.useChrome) {
-                    this.renderChromeEffect(ctx, text, x, y, styling);
-                }
-                
-                if (styling.useStroke) {
-                    this.renderStrokeEffect(ctx, text, x, y, fontSize, styling);
-                }
-                
-                this.renderMainTitleWithGlow(ctx, text, x, y, fontSize, styling);
-                
-                ctx.restore();
-            }
-
-            renderTextShadow(ctx, text, x, y, fontSize, styling) {
-                const shadowOffsetX = Math.floor(fontSize / 20);
-                const shadowOffsetY = Math.floor(fontSize / 15);
-                
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                this.renderTextWithSpacing(ctx, text, x + shadowOffsetX * 2, y + shadowOffsetY * 2, styling.letterSpacing);
-                
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                this.renderTextWithSpacing(ctx, text, x + shadowOffsetX, y + shadowOffsetY, styling.letterSpacing);
-            }
-
-            renderChromeEffect(ctx, text, x, y, styling) {
-                ctx.fillStyle = '#2a2a2a';
-                this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-                
-                ctx.strokeStyle = styling.titleColor;
-                ctx.lineWidth = styling.strokeWidth;
-                ctx.lineJoin = 'round';
-                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-                
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-            }
-
-            renderStrokeEffect(ctx, text, x, y, fontSize, styling) {
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.lineWidth = styling.strokeWidth + 2;
-                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-                
-                ctx.strokeStyle = styling.titleGlow;
-                ctx.lineWidth = styling.strokeWidth;
-                this.strokeTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-            }
-
-            renderMainTitleWithGlow(ctx, text, x, y, fontSize, styling) {
-                for (let i = 0; i < 3; i++) {
-                    ctx.shadowColor = styling.titleGlow;
-                    ctx.shadowBlur = styling.glowIntensity + (i * 5);
-                    ctx.fillStyle = styling.titleColor;
-                    this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-                }
-                
-                if (styling.glowIntensity > 15) {
-                    ctx.shadowBlur = styling.glowIntensity * 2;
-                    ctx.fillStyle = '#ffffff';
-                    this.renderTextWithSpacing(ctx, text, x, y, styling.letterSpacing);
-                }
-                
-                ctx.shadowBlur = 0;
-            }
-
-            renderTagline(ctx, tagline, x, y, size, styling) {
-                ctx.save();
-                ctx.font = `400 ${size}px ${styling.taglineFont || 'Lato, sans-serif'}`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillText(tagline, x + 2, y + 2);
-                
-                ctx.fillStyle = styling.taglineColor || 'rgba(255, 255, 255, 0.9)';
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                ctx.shadowBlur = 4;
-                ctx.fillText(tagline, x, y);
-                
-                ctx.restore();
-            }
-
-            renderProfessionalCredits(ctx, concept, w, h, styling) {
-                const creditZones = {
-                    cast: { start: 0.72, height: 0.12 },
-                    director: { start: 0.85, height: 0.04 },
-                    studio: { start: 0.90, height: 0.03 },
-                    metadata: { start: 0.94, height: 0.05 }
-                };
-                
-                const cast = this.generateProfessionalCast(concept);
-                
-                this.renderCastSection(ctx, cast, w, h, creditZones.cast, styling);
-                this.renderDirectorSection(ctx, concept, w, h, creditZones.director, styling);
-                this.renderStudioSection(ctx, concept, w, h, creditZones.studio, styling);
-                this.renderMetadataSection(ctx, concept, w, h, creditZones.metadata, styling);
-            }
-
-            renderCastSection(ctx, cast, w, h, zone, styling) {
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(14, Math.floor(w / 50));
-                
-                ctx.save();
-                ctx.font = `600 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.95)';
-                ctx.textAlign = 'center';
-                
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.shadowBlur = 3;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
-                
-                if (cast.length <= 2) {
-                    const lineHeight = fontSize * 1.4;
-                    cast.forEach((actor, index) => {
-                        const cleanName = this.cleanActorName(actor);
-                        const yPos = zoneY + (index * lineHeight);
-                        ctx.fillText(cleanName, w / 2, yPos);
-                    });
-                } else {
-                    const lineHeight = fontSize * 1.5;
-                    const leftX = w * 0.25;
-                    const rightX = w * 0.75;
+                    ctx.save();
+                    ctx.font = `400 ${taglineSize}px "Lato", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
                     
-                    cast.forEach((actor, index) => {
-                        const cleanName = this.cleanActorName(actor);
-                        const isLeft = index % 2 === 0;
-                        const xPos = isLeft ? leftX : rightX;
-                        const row = Math.floor(index / 2);
-                        const yPos = zoneY + (row * lineHeight);
-                        
-                        const maxWidth = w * 0.2;
-                        let displayName = cleanName;
-                        while (ctx.measureText(displayName).width > maxWidth && displayName.length > 8) {
-                            displayName = displayName.substring(0, displayName.length - 4) + '...';
-                        }
-                        
-                        ctx.fillText(displayName, xPos, yPos);
-                    });
+                    const taglineY = titleY + titleSize * 0.8;
+                    
+                    // Tagline shadow
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                    ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
+                    
+                    // Tagline text
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                    ctx.shadowBlur = 4;
+                    ctx.fillText(tagline, w / 2, taglineY);
+                    
+                    ctx.restore();
                 }
                 
-                ctx.restore();
-            }
-
-            renderDirectorSection(ctx, concept, w, h, zone, styling) {
-                const director = concept.director || this.generateDirector();
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(13, Math.floor(w / 55));
+                // Credits section at bottom
+                const creditsY = h * 0.9;
+                const creditsSize = Math.max(16, Math.floor(w / 60));
                 
                 ctx.save();
-                ctx.font = `700 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.95)';
+                ctx.font = `600 ${creditsSize}px "Lato", sans-serif`;
                 ctx.textAlign = 'center';
-                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                 ctx.shadowBlur = 3;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
-                
-                ctx.font = `400 ${Math.floor(fontSize * 0.8)}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillText('DIRECTED BY', w / 2, zoneY - fontSize * 0.3);
-                
-                ctx.font = `700 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillText(director.toUpperCase(), w / 2, zoneY);
-                
-                ctx.restore();
-            }
-
-            renderStudioSection(ctx, concept, w, h, zone, styling) {
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(12, Math.floor(w / 60));
-                
-                ctx.save();
-                ctx.font = `600 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.9)';
-                ctx.textAlign = 'center';
-                
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
                 
                 const studioText = 'AN ABNORMAL STUDIOS FILM';
-                ctx.fillText(studioText, w / 2, zoneY);
-                
-                const textWidth = ctx.measureText(studioText).width;
-                const underlineY = zoneY + fontSize * 0.3;
-                ctx.strokeStyle = styling.creditsColor || 'rgba(255, 255, 255, 0.9)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo((w / 2) - (textWidth / 2), underlineY);
-                ctx.lineTo((w / 2) + (textWidth / 2), underlineY);
-                ctx.stroke();
+                ctx.fillText(studioText, w / 2, creditsY);
                 
                 ctx.restore();
+                
+                console.log('✅ Title and credits rendered');
             }
 
-            renderMetadataSection(ctx, concept, w, h, zone, styling) {
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(11, Math.floor(w / 70));
-                const lineHeight = fontSize * 1.3;
-                
-                ctx.save();
-                ctx.font = `400 ${fontSize}px ${styling.creditsFont || 'Lato, sans-serif'}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.textAlign = 'center';
-                
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                ctx.shadowBlur = 2;
-                
-                const runtimes = ['89 MINUTES', '95 MINUTES', '103 MINUTES', '117 MINUTES', '124 MINUTES'];
-                const runtime = runtimes[Math.floor(Math.random() * runtimes.length)];
-                const ratingLine = `NR  •  ${runtime}`;
-                
-                ctx.fillText(ratingLine, w / 2, zoneY);
-                
-                const copyrightLine = `© ${new Date().getFullYear()} ABNORMAL STUDIOS`;
-                ctx.fillText(copyrightLine, w / 2, zoneY + lineHeight);
-                
-                ctx.restore();
-            }
-
-            // UTILITY FUNCTIONS
-            generateProfessionalCast(concept) {
-                if (concept.cast && concept.cast.length) {
-                    return concept.cast.slice(0, 4);
-                }
-                
-                const professionalNames = [
-                    'ELENA CROSS', 'MARCUS VALE', 'ZARA STORM', 'VINCENT KANE',
-                    'LUNA THORNE', 'DANTE RIVERS', 'IRIS BLAKE', 'PHOENIX STEEL',
-                    'NOVA FOX', 'ATLAS NIGHT', 'SAGE HUNTER', 'RAVEN COLE',
-                    'JADE WINTERS', 'ORION BLACK', 'RUBY SHARP', 'COLE GREY'
-                ];
-                
-                const shuffled = [...professionalNames].sort(() => Math.random() - 0.5);
-                return shuffled.slice(0, 4);
-            }
-
-            generateDirector() {
-                const directors = [
-                    'CAMERON WELLS', 'JORDAN CROSS', 'ALEX NOVA', 'MORGAN STEEL',
-                    'RILEY STORM', 'CASEY NIGHT', 'DREW HUNTER', 'SAGE RIVERS'
-                ];
-                return directors[Math.floor(Math.random() * directors.length)];
-            }
-
-            cleanActorName(actor) {
-                return String(actor).split(' AS ')[0].trim().toUpperCase();
-            }
-
-            intelligentTitleWrap(title, maxWidth, ctx, spacing) {
-                const words = title.split(' ');
-                if (words.length === 1) return [title];
-                
-                const lines = [];
-                let currentLine = '';
-                
-                for (let word of words) {
-                    const testLine = currentLine ? `${currentLine} ${word}` : word;
-                    const testWidth = this.measureTextWithSpacing(ctx, testLine, spacing);
-                    
-                    if (testWidth <= maxWidth) {
-                        currentLine = testLine;
-                    } else {
-                        if (currentLine) lines.push(currentLine);
-                        currentLine = word;
-                    }
-                }
-                
-                if (currentLine) lines.push(currentLine);
-                return lines.slice(0, 2);
-            }
-
-            measureTextWithSpacing(ctx, text, spacing) {
-                if (!spacing || spacing === 0) return ctx.measureText(text).width;
-                
-                let totalWidth = 0;
-                const spaceWidth = ctx.measureText('M').width * spacing;
-                
-                for (let i = 0; i < text.length; i++) {
-                    totalWidth += ctx.measureText(text[i]).width;
-                    if (i < text.length - 1) {
-                        totalWidth += spaceWidth;
-                    }
-                }
-                
-                return totalWidth;
-            }
-
-            renderTextWithSpacing(ctx, text, x, y, spacing) {
-                if (!spacing || spacing === 0) {
-                    ctx.fillText(text, x, y);
-                    return;
-                }
-                
-                const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
-                let currentX = x - (totalWidth / 2);
-                const spaceWidth = ctx.measureText('M').width * spacing;
-                
-                for (let i = 0; i < text.length; i++) {
-                    const char = text[i];
-                    const charWidth = ctx.measureText(char).width;
-                    
-                    ctx.fillText(char, currentX + (charWidth / 2), y);
-                    currentX += charWidth;
-                    
-                    if (i < text.length - 1) {
-                        currentX += spaceWidth;
-                    }
-                }
-            }
-
-            strokeTextWithSpacing(ctx, text, x, y, spacing) {
-                if (!spacing || spacing === 0) {
-                    ctx.strokeText(text, x, y);
-                    return;
-                }
-                
-                const totalWidth = this.measureTextWithSpacing(ctx, text, spacing);
-                let currentX = x - (totalWidth / 2);
-                const spaceWidth = ctx.measureText('M').width * spacing;
-                
-                for (let i = 0; i < text.length; i++) {
-                    const char = text[i];
-                    const charWidth = ctx.measureText(char).width;
-                    
-                    ctx.strokeText(char, currentX + (charWidth / 2), y);
-                    currentX += charWidth;
-                    
-                    if (i < text.length - 1) {
-                        currentX += spaceWidth;
-                    }
-                }
-            }
-
-            // PROFESSIONAL VISUAL EFFECTS
-            addProfessionalEffects(concept) {
-                const canvas = this.elements.canvas;
-                const ctx = this.ctx;
-                const styling = this.styling;
-                
-                if (styling.needsFilmGrain) {
-                    this.addFilmGrain(ctx, canvas.width, canvas.height, 0.1);
-                }
-                
-                if (styling.needsVignette) {
-                    this.addVignette(ctx, canvas.width, canvas.height);
-                }
-                
-                this.addEraOverlays(concept.decade);
-            }
-
-            addFilmGrain(ctx, width, height, intensity = 0.1) {
-                ctx.save();
-                ctx.globalAlpha = intensity;
-                ctx.globalCompositeOperation = 'overlay';
-                
-                const imageData = ctx.createImageData(width, height);
-                const data = imageData.data;
-                
-                for (let i = 0; i < data.length; i += 4) {
-                    const noise = Math.random() * 255;
-                    data[i] = noise;
-                    data[i + 1] = noise;
-                    data[i + 2] = noise;
-                    data[i + 3] = 255 * intensity;
-                }
-                
-                ctx.putImageData(imageData, 0, 0);
-                ctx.restore();
-            }
-
-            addVignette(ctx, width, height) {
-                ctx.save();
-                
-                const centerX = width / 2;
-                const centerY = height / 2;
-                const radius = Math.max(width, height) * 0.7;
-                
-                const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-                gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
-                gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)');
-                gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, width, height);
-                ctx.restore();
-            }
-
-            addEraOverlays(decade) {
-                const ctx = this.ctx;
-                const { width: w, height: h } = this.elements.canvas;
-                
-                ctx.save();
-                ctx.globalAlpha = 0.1;
-                
-                switch (decade) {
-                    case '1950s':
-                    case '1960s':
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-                        for (let i = 0; i < w; i += 12) {
-                            ctx.fillRect(i, 0, 1, h);
-                        }
-                        break;
-                        
-                    case '1970s':
-                        ctx.fillStyle = 'rgba(255, 165, 0, 0.08)';
-                        for (let y = 0; y < h; y += 50) {
-                            ctx.fillRect(0, y, w, 2);
-                        }
-                        break;
-                        
-                    case '1980s':
-                        ctx.fillStyle = 'rgba(0, 255, 255, 0.04)';
-                        for (let y = 0; y < h; y += 4) {
-                            ctx.fillRect(0, y, w, 1);
-                        }
-                        break;
-                        
-                    case '2000s':
-                        if (Math.random() > 0.7) {
-                            ctx.fillStyle = 'rgba(0, 255, 0, 0.03)';
-                            for (let x = 0; x < w; x += 20) {
-                                ctx.fillRect(x, 0, 1, h);
-                            }
-                        }
-                        break;
-                }
-                
-                ctx.restore();
-            }
-
-            // ENHANCED INFO UPDATE
             updateInfo(concept) {
                 if (this.elements.decadeText) this.elements.decadeText.textContent = concept.decade || '-';
                 if (this.elements.genreText) this.elements.genreText.textContent = concept.genre || '-';
@@ -1316,270 +733,7 @@
                 if (this.elements.taglineText) this.elements.taglineText.textContent = concept.tagline || '-';
                 if (this.elements.synopsisText) this.elements.synopsisText.textContent = concept.synopsis || '-';
                 
-                this.generateProfessionalInstagramCaption(concept);
-                
-                console.log('📝 Movie info updated with professional details');
-            }
-            
-            generateProfessionalInstagramCaption(concept) {
-                if (!concept.title) {
-                    this.elements.instagramCaption.value = '';
-                    this.elements.copyCaptionBtn.disabled = true;
-                    return;
-                }
-
-                const emojis = {
-                    'Horror': '👻🎭💀',
-                    'Sci-Fi': '🚀🌌👽',
-                    'Fusion': '🎭🌌💀'
-                };
-
-                const genreEmoji = emojis[concept.genre] || '🎬';
-                
-                let caption = '';
-                caption += `${genreEmoji} POSTER DROP: "${concept.title}" ${genreEmoji}\n\n`;
-                caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• Surreal Vibes' : ''}\n`;
-                caption += `💫 "${concept.tagline}"\n\n`;
-                
-                const synopsis = concept.synopsis ? 
-                    (concept.synopsis.length > 140 ? concept.synopsis.substring(0, 140) + '...' : concept.synopsis) :
-                    'A cinematic journey that challenges perception and reality.';
-                caption += `📖 ${synopsis}\n\n`;
-                
-                if (concept.cast && concept.cast.length > 0) {
-                    const mainCast = concept.cast.slice(0, 3).map(actor => 
-                        actor.split(' AS ')[0].trim()
-                    ).join(' • ');
-                    caption += `⭐ Starring: ${mainCast}\n`;
-                }
-                
-                if (concept.director) {
-                    caption += `🎥 Directed by: ${concept.director}\n`;
-                }
-                
-                caption += `\n🤖 Generated with AI • What era should I explore next?\n\n`;
-                caption += this.generateProfessionalHashtags(concept);
-
-                this.elements.instagramCaption.value = caption;
-                this.elements.copyCaptionBtn.disabled = false;
-            }
-            
-            generateProfessionalHashtags(concept) {
-                const baseTags = [
-                    '#MoviePoster', '#AIArt', '#FilmDesign', '#CinematicArt',
-                    '#GenerativeAI', '#PosterDesign', '#ArtificialIntelligence',
-                    '#MovieMagic', '#FilmArt', '#PosterArt'
-                ];
-                
-                if (concept.genre) {
-                    const genreLower = concept.genre.toLowerCase();
-                    if (genreLower.includes('horror')) {
-                        baseTags.push('#Horror', '#HorrorPoster', '#ScaryMovies', '#HorrorArt');
-                    }
-                    if (genreLower.includes('sci-fi')) {
-                        baseTags.push('#SciFi', '#ScienceFiction', '#Futuristic', '#SciFiArt');
-                    }
-                }
-                
-                if (concept.decade) {
-                    baseTags.push(`#${concept.decade.replace('s', '')}`);
-                    const decadeMap = {
-                        '1950s': ['#Vintage', '#Classic', '#RetroStyle'],
-                        '1960s': ['#Sixties', '#ModStyle', '#Retro'],
-                        '1970s': ['#Seventies', '#VintageStyle', '#RetroAesthetic'],
-                        '1980s': ['#Eighties', '#Retro', '#NeonAesthetic', '#Synthwave'],
-                        '1990s': ['#Nineties', '#90sAesthetic', '#Nostalgia'],
-                        '2000s': ['#Y2K', '#2000sAesthetic', '#Millennium'],
-                        '2010s': ['#2010s', '#ModernClassic'],
-                        '2020s': ['#Contemporary', '#ModernArt', '#CurrentCinema']
-                    };
-                    
-                    if (decadeMap[concept.decade]) {
-                        baseTags.push(...decadeMap[concept.decade]);
-                    }
-                }
-                
-                baseTags.push(
-                    '#ConceptArt', '#VisualDesign', '#CreativeAI',
-                    '#DigitalArt', '#ArtDirection', '#FilmIndustry'
-                );
-                
-                return baseTags.slice(0, 28).sort(() => Math.random() - 0.5).join(' ');
-            }
-
-            async copyInstagramCaption() {
-                if (!this.elements.instagramCaption.value) return;
-                
-                try {
-                    await navigator.clipboard.writeText(this.elements.instagramCaption.value);
-                    
-                    const originalText = this.elements.copyCaptionBtn.textContent;
-                    this.elements.copyCaptionBtn.textContent = 'Copied! ✓';
-                    this.elements.copyCaptionBtn.classList.add('bg-green-600');
-                    this.elements.copyCaptionBtn.classList.remove('bg-pink-600');
-                    
-                    setTimeout(() => {
-                        this.elements.copyCaptionBtn.textContent = originalText;
-                        this.elements.copyCaptionBtn.classList.remove('bg-green-600');
-                        this.elements.copyCaptionBtn.classList.add('bg-pink-600');
-                    }, 2000);
-                    
-                } catch (error) {
-                    console.error('Error copying caption:', error);
-                }
-            }
-
-            async generateAISongRecommendation(concept) {
-                if (!concept.title || !concept.synopsis) {
-                    this.elements.songTitle.textContent = '-';
-                    this.elements.songArtist.textContent = '-';
-                    this.elements.songReason.textContent = '-';
-                    this.elements.copySongBtn.disabled = true;
-                    return;
-                }
-
-                this.elements.songTitle.textContent = 'Generating...';
-                this.elements.songArtist.textContent = 'AI is thinking...';
-                this.elements.songReason.textContent = 'Analyzing movie themes and finding the perfect soundtrack match...';
-                this.elements.copySongBtn.disabled = true;
-
-                try {
-                    console.log('Generating AI song recommendation...');
-                    
-                    const response = await fetch(this.SONG_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ concept })
-                    });
-
-                    const responseText = await response.text();
-
-                    if (!response.ok) {
-                        throw new Error('Song recommendation request failed: ' + response.status + ' - ' + responseText);
-                    }
-
-                    const result = JSON.parse(responseText);
-                    
-                    if (result.success && result.recommendation) {
-                        const rec = result.recommendation;
-                        
-                        this.elements.songTitle.textContent = rec.title;
-                        this.elements.songArtist.textContent = rec.artist + (rec.year ? ' (' + rec.year + ')' : '');
-                        this.elements.songReason.textContent = rec.reason;
-                        this.elements.copySongBtn.disabled = false;
-                        
-                        console.log('AI song recommendation generated:', rec);
-                    } else {
-                        throw new Error(result.error || 'Invalid response from song API');
-                    }
-                } catch (error) {
-                    console.error('Error generating AI song recommendation:', error);
-                    console.log('Falling back to static song recommendation...');
-                    this.generateFallbackSongRecommendation(concept);
-                }
-            }
-
-            generateFallbackSongRecommendation(concept) {
-                const recommendation = this.getSongForMovie(concept);
-                
-                this.elements.songTitle.textContent = recommendation.title;
-                this.elements.songArtist.textContent = recommendation.artist;
-                this.elements.songReason.textContent = recommendation.reason + ' (Generated using fallback system)';
-                this.elements.copySongBtn.disabled = false;
-            }
-
-            getSongForMovie(concept) {
-                const genre = (concept.genre || '').toLowerCase();
-                const decade = concept.decade || '';
-                
-                const songDatabase = {
-                    '1950s': {
-                        horror: [
-                            { title: 'Monster Mash', artist: 'Bobby Pickett', reason: 'Classic 50s horror novelty song' },
-                            { title: 'Fever', artist: 'Peggy Lee', reason: 'Sultry jazz with psychological thriller vibes' }
-                        ],
-                        'sci-fi': [
-                            { title: 'Flying Purple People Eater', artist: 'Sheb Wooley', reason: 'Whimsical 50s sci-fi hit' },
-                            { title: 'Space Oddity', artist: 'David Bowie', reason: 'Space exploration anthem' }
-                        ],
-                        default: [
-                            { title: 'Only You', artist: 'The Platters', reason: 'Quintessential 50s romance' },
-                            { title: 'Great Balls of Fire', artist: 'Jerry Lee Lewis', reason: 'High-energy 50s rock' }
-                        ]
-                    },
-                    '1980s': {
-                        horror: [
-                            { title: 'Thriller', artist: 'Michael Jackson', reason: 'The ultimate 80s horror anthem' },
-                            { title: "Somebody's Watching Me", artist: 'Rockwell', reason: 'Paranoid 80s synth-pop' }
-                        ],
-                        'sci-fi': [
-                            { title: 'Blue Monday', artist: 'New Order', reason: 'Futuristic synth-pop classic' },
-                            { title: 'Cars', artist: 'Gary Numan', reason: 'Robotic new wave about technology' }
-                        ],
-                        default: [
-                            { title: "Don't Stop Believin'", artist: 'Journey', reason: 'Anthemic 80s rock' },
-                            { title: 'Take On Me', artist: 'a-ha', reason: 'Upbeat synth-pop classic' }
-                        ]
-                    },
-                    '2020s': {
-                        horror: [
-                            { title: 'bad guy', artist: 'Billie Eilish', reason: 'Dark pop with horror aesthetic' },
-                            { title: 'Therefore I Am', artist: 'Billie Eilish', reason: 'Menacing pop with edge' }
-                        ],
-                        'sci-fi': [
-                            { title: 'Blinding Lights', artist: 'The Weeknd', reason: 'Synthwave with futuristic sound' },
-                            { title: 'Levitating', artist: 'Dua Lipa', reason: 'Space-age disco-pop' }
-                        ],
-                        default: [
-                            { title: 'drivers license', artist: 'Olivia Rodrigo', reason: 'Emotional storytelling ballad' },
-                            { title: 'Good 4 U', artist: 'Olivia Rodrigo', reason: 'Pop-punk energy' }
-                        ]
-                    }
-                };
-
-                const defaultSongs = [
-                    { title: 'Bohemian Rhapsody', artist: 'Queen', reason: 'Epic cinematic rock' },
-                    { title: 'Hotel California', artist: 'Eagles', reason: 'Dark narrative rock' }
-                ];
-
-                let genreCategory = 'default';
-                if (genre.includes('horror')) genreCategory = 'horror';
-                else if (genre.includes('sci-fi')) genreCategory = 'sci-fi';
-
-                const decadeSongs = songDatabase[decade] || { default: defaultSongs };
-                const genreSongs = decadeSongs[genreCategory] || decadeSongs['default'] || defaultSongs;
-
-                const selectedSong = genreSongs[Math.floor(Math.random() * genreSongs.length)];
-
-                return {
-                    title: selectedSong.title,
-                    artist: selectedSong.artist,
-                    reason: selectedSong.reason + ' - Perfect for "' + concept.title + '"'
-                };
-            }
-
-            async copySongInfo() {
-                if (!this.elements.songTitle.textContent || this.elements.songTitle.textContent === '-') return;
-                
-                const songInfo = '🎵 Soundtrack Recommendation:\n"' + this.elements.songTitle.textContent + '" by ' + this.elements.songArtist.textContent + '\n\n' + this.elements.songReason.textContent;
-                
-                try {
-                    await navigator.clipboard.writeText(songInfo);
-                    
-                    const originalText = this.elements.copySongBtn.textContent;
-                    this.elements.copySongBtn.textContent = 'Copied! ✓';
-                    this.elements.copySongBtn.classList.add('bg-green-600');
-                    this.elements.copySongBtn.classList.remove('bg-indigo-600');
-                    
-                    setTimeout(() => {
-                        this.elements.copySongBtn.textContent = originalText;
-                        this.elements.copySongBtn.classList.remove('bg-green-600');
-                        this.elements.copySongBtn.classList.add('bg-indigo-600');
-                    }, 2000);
-                    
-                } catch (error) {
-                    console.error('Error copying song info:', error);
-                }
+                console.log('📝 Movie info updated');
             }
 
             showError(message) {
@@ -1699,7 +853,7 @@
                         
                         const originalText = this.elements.shareBtn.textContent;
                         this.elements.shareBtn.textContent = 'Copied!';
-                        setTimeout(function() {
+                        setTimeout(() => {
                             this.elements.shareBtn.textContent = originalText;
                         }, 2000);
                     }
@@ -1732,7 +886,7 @@
                 if (!this.autoGenerate) return;
                 
                 this.stopAutoTimer();
-                let timeLeft = 180;
+                let timeLeft = 180; // 3 minutes
                 const self = this;
                 
                 const updateTimer = function() {
@@ -1762,215 +916,106 @@
                 }
             }
 
-            // UPDATED GENERATION FUNCTION
-			 async handleGeneration(retryCount = 0, maxRetries = 2) {
-				try {
-					console.log('🎬 Starting professional poster generation...');
-					this.clearError?.();
-					this.setLoadingState(true);
+            // MAIN GENERATION FUNCTION - FIXED
+            async handleGeneration(retryCount = 0, maxRetries = 2) {
+                try {
+                    console.log('🎬 Starting poster generation...');
+                    this.clearError?.();
+                    this.setLoadingState(true);
 
-					// ✅ FIX: call correct concept method
-					const concept = await this.generateMovieConcept();
-					if (!concept) { 
-						this.setLoadingState(false); 
-						return; 
-					}
+                    // Step 1: Generate concept
+                    const concept = await this.generateMovieConcept();
+                    if (!concept) { 
+                        this.setLoadingState(false); 
+                        return; 
+                    }
 
-					console.log('✅ Concept generated:', concept.title);
-					this.currentConcept = concept;
-					this.updateInfo?.(concept);
+                    console.log('✅ Concept generated:', concept.title);
+                    this.currentConcept = concept;
+                    this.updateInfo?.(concept);
 
-					this.updateProgress('image', 35);
-					const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
-					if (!baseImageUrl) {
-						if (retryCount < maxRetries) {
-							console.log(`🔄 Retrying entire generation process (${retryCount + 1}/${maxRetries})...`);
-							this.setLoadingState(false);
-							setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
-							return;
-						}
-						this.setLoadingState(false);
-						this.showError('Failed to generate image after multiple attempts. Please try again.');
-						return;
-					}
+                    // Step 2: Generate base image
+                    this.updateProgress('image', 35);
+                    const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
+                    if (!baseImageUrl) {
+                        if (retryCount < maxRetries) {
+                            console.log(`🔄 Retrying entire generation process (${retryCount + 1}/${maxRetries})...`);
+                            this.setLoadingState(false);
+                            setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                            return;
+                        }
+                        this.setLoadingState(false);
+                        this.showError('Failed to generate image after multiple attempts. Please try again.');
+                        return;
+                    }
 
-					console.log('✅ Base image generated (text prevention applied)');
+                    console.log('✅ Base image generated');
 
-					this.updateProgress('text', 55);
-					const safeImageUrl = normalizeToBlobUrl(baseImageUrl);
-					await this.smartCropToInstagramRatio(safeImageUrl);
+                    // Step 3: Load image to canvas
+                    this.updateProgress('text', 55);
+                    await this.loadImageToCanvas(baseImageUrl);
+                    console.log('✅ Image loaded to canvas');
 
-					console.log('✅ Image cropped and optimized');
+                    // Step 4: Add overlays and text
+                    this.updateProgress('text', 75);
+                    this.addGradientOverlays();
+                    console.log('✅ Gradients applied');
 
-					this.updateProgress('text', 65);
-					this.addGradientOverlays?.();
+                    this.updateProgress('text', 85);
+                    this.renderTitleAndCredits(concept);
+                    console.log('✅ Title and credits rendered');
 
-					this.updateProgress('text', 75);
-					await this.renderTitleAndCredits(concept);
-					console.log('✅ Professional typography rendered');
+                    this.updateProgress('complete', 100);
 
-					this.updateProgress('text', 85);
-					this.addProfessionalEffects?.(concept);
-					console.log('✅ Professional effects applied');
+                    // Step 5: Display final poster
+                    const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
+                    this.elements.posterImage.src = finalImageUrl;
+                    
+                    console.log('✅ Final poster URL created, length:', finalImageUrl.length);
+                    console.log('✅ Image src set to poster element');
 
-					// 🎵 Song recommendation
-					if (typeof this.generateAISongRecommendation === 'function') {
-						this.updateProgress('song', 90);
-						this.generateAISongRecommendation(concept).catch(err => {
-							console.warn('Song generation failed:', err);
-						});
-					}
+                    // Update counters and history
+                    this.generationCount++;
+                    if (this.elements.generationCounter) {
+                        const plural = this.generationCount === 1 ? 'poster' : 'posters';
+                        this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
+                    }
 
-					this.updateProgress('complete', 100);
+                    if (!this.recentPosters) this.recentPosters = [];
+                    this.recentPosters.unshift({ imageUrl: finalImageUrl, concept, timestamp: Date.now() });
+                    if (this.recentPosters.length > 12) {
+                        this.recentPosters = this.recentPosters.slice(0, 12);
+                    }
+                    this.updateRecentDisplay?.();
 
-					// ✅ Show poster as <img> from canvas
-					const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
-					this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
-					this.elements.posterImage.classList.remove('hidden');
-					this.elements.loader.classList.add('hidden');
-					console.log("✅ Poster image displayed");
+                    console.log('🎉 Poster generation complete!');
 
-					// Update counters + history
-					this.generationCount++;
-					if (this.elements.generationCounter) {
-						const plural = this.generationCount === 1 ? 'poster' : 'posters';
-						this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
-					}
+                    if (this.autoGenerate) {
+                        setTimeout(() => this.startAutoTimer?.(), 1000);
+                    }
 
-					if (!this.recentPosters) this.recentPosters = [];
-					this.recentPosters.unshift({ imageUrl: finalImageUrl, concept, timestamp: Date.now() });
-					if (this.recentPosters.length > 12) {
-						this.recentPosters = this.recentPosters.slice(0, 12);
-					}
-					this.updateRecentDisplay?.();
+                } catch (error) {
+                    console.error("❌ Error in poster generation:", error);
+                    console.error("Stack trace:", error.stack);
 
-					console.log('🎉 Professional poster generation complete!');
+                    if (retryCount < maxRetries && (
+                        error.name === 'AbortError' ||
+                        error.message.includes('timeout') ||
+                        error.message.includes('500'))
+                    ) {
+                        console.log(`🔄 Auto-retrying generation (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        return this.handleGeneration(retryCount + 1, maxRetries);
+                    }
 
-					if (this.autoGenerate) {
-						setTimeout(() => this.startAutoTimer?.(), 1000);
-					}
-
-				} catch (error) {
-					console.error("❌ Error generating image:", error);
-
-					if (retryCount < maxRetries && (
-						error.name === 'AbortError' ||
-						error.message.includes('timeout') ||
-						error.message.includes('500'))
-					) {
-						console.log(`🔄 Auto-retrying image generation (${retryCount + 1}/${maxRetries})`);
-						await new Promise(resolve => setTimeout(resolve, 2000));
-						return this.handleGeneration(retryCount + 1, maxRetries);
-					}
-
-					this.showError('Failed to generate image: ' + error.message);
-					return null;
-				} finally {
-					this.setLoadingState(false);
-				}
-			}
-
-            async generateConcept() {
-                return await this.generateMovieConcept();
+                    this.showError('Failed to generate poster: ' + error.message);
+                } finally {
+                    this.setLoadingState(false);
+                }
             }
+        }
 
-			buildVisualIntent(concept) {
-				const genrePref = this.elements.genreFilter?.value || 'any';
-				const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
-				const artStyle = this.elements.artStyleFilter?.value || 'authentic';
-				
-				// ENHANCED TEXT PREVENTION - Multiple strategies
-			const textPreventionPrompts = [
-				// Primary prevention
-				'NO TEXT OR TITLES IN IMAGE',
-				'NO WRITTEN WORDS OR LETTERS VISIBLE', 
-				'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
-				'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
-				
-				// Secondary prevention  
-				'no movie titles visible',
-				'no credits or cast names shown',
-				'no taglines or slogans in image',
-				'no studio logos or watermarks',
-				
-				// Tertiary prevention
-				'image ready for custom text overlay',
-				'blank poster template style',
-				'visual elements only, no typography',
-				
-				// Artwork composition (NOT poster photo)
-				'flat artwork composition',
-				'direct front view',
-				'no perspective or 3D effects',
-				'straight-on illustration',
-				'key art style',
-				'concept art rendering',
-				'NOT a photograph of a poster'
-			];				
-				// Enhanced visual specifications with stronger text prevention
-				const professionalSpecs = [
-					`Professional cinematic illustration for "${concept.title}"`,
-					`Genre: ${concept.genre || 'cinematic thriller'}`,
-					`Era: ${concept.decade || '1980s'} authentic visual style`,
-					`Mood: ${concept.tagline || 'atmospheric and engaging'}`,
-					`Visual story: ${concept.synopsis || 'compelling narrative'}`,
-					
-					// Technical specifications with text prevention
-					'High-end movie artwork composition WITHOUT ANY TEXT',
-					'Portrait orientation, cinematic framing',
-					'Professional studio lighting setup',
-					'Dramatic depth of field photography',
-					'Rich color palette with strong visual contrast',
-					
-					// Style specifications
-					this.getEnhancedStyleDescription(artStyle, eraPref),
-					
-					// Quality requirements with text emphasis
-					'Premium movie key art visual elements only',
-					'Theatrical release standard imagery',
-					'Sharp focus on main subject without text',
-					'Professional color grading and composition',
-					'Clean visual composition ready for text overlay',
-					'Image designed specifically for adding custom titles later',
-					
-					// Multiple text prevention strategies
-					...textPreventionPrompts,
-					
-					// Safety constraints
-					'PG-13 rating appropriate content',
-					'No graphic violence or gore',
-					'Professional and tasteful visual presentation'
-				];
-
-				const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
-					'. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
-					
-				console.log('🚫 Enhanced text prevention prompt generated');
-				return finalPrompt;
-			}
-			
-			getEnhancedStyleDescription(artStyle, era) {
-				const styleMap = {
-					'authentic': {
-						'1950s': 'hand-painted movie artwork without text, vintage lithograph visual style',
-						'1960s': 'mod graphic design elements without text, bold geometric visual shapes',
-						'1970s': 'airbrushed illustration style without text, warm earth tone visuals',
-						'1980s': 'painted character montage without text, neon visual highlights',
-						'1990s': 'photo-composite visual style without text, matte finish photography',
-						'2000s': 'digital photography composite without text, clean visual gradients',
-						'2010s': 'minimalist movie art design without text, negative space composition',
-						'2020s': 'contemporary digital art without text, refined visual aesthetic'
-					},
-					'b-movie': 'exaggerated B-movie key art visual style without text, bold dramatic composition ready for custom titles',
-					'photo': 'modern photographic movie art composition without text, professional studio photography ready for overlay',
-					'painted': 'classic painted movie artwork without text, traditional illustration style ready for custom typography'
-				};
-
-				const baseDescription = styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie key art visual style without text';
-				return baseDescription + ', specifically designed for custom text overlay';
-			}	
-		}	
-       document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing EnhancedPosterAI...');
             window.posterAI = new EnhancedPosterAI();
         });
