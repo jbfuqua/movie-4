@@ -109,7 +109,7 @@ Return JSON:
     "environment":"...",
     "wardrobe_props":"...",
     "motifs":["..."],
-    "keywords":["poster","no text","cinematic","professional"],
+    "keywords":["art","no text","cinematic","professional"],
     "banned":["gore","blood","weapons","graphic injury"]
   },
   "render_style": "hand-painted lithograph",

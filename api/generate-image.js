@@ -18,7 +18,7 @@ export default async function handler(req, res) {
             '1980s': 'painted montage with chrome gradients, bloom highlights, VHS scanlines',
             '1990s': 'studio photo-composite, subtle grain, subdued palette',
             '2000s': 'digital composite, clean gradients',
-            '2010s': 'minimalist photographic poster, negative space',
+            '2010s': 'minimalist photographic art, negative space',
             '2020s': 'contemporary digital HDR, refined grading'
         };
 
@@ -52,12 +52,12 @@ export default async function handler(req, res) {
 			].join(', ');
 
 			return [
-				`Professional ${concept.genre || 'cinematic'} movie poster artwork in the ${decade} style.`,
+				textPreventionInstructions,
+				`Professional ${concept.genre || 'cinematic'} movie artwork in the ${decade} style.`,
 				declaredStyle || eraMedium,
 				cleanedElements,
 				nodBias,
-				textPreventionInstructions,
-				'no text, no logos, no titles, no credits, no words visible, cinematic poster artwork only, professional, PG-13'
+				'no text, no logos, no titles, no credits, no words visible, cinematic artwork only, professional, PG-13'
 			].filter(Boolean).join(' ');
 		}
 		
