@@ -522,6 +522,7 @@
 
             async generateImage(visualElements, concept) {
                 console.log("Generating image...");
+                console.log("🎬 Visual elements prompt:", visualElements.substring(0, 200) + '...');
                 this.updateProgress('image', 50);
                 
                 const payload = {
@@ -537,22 +538,26 @@
                     });
 
                     const responseText = await response.text();
+                    console.log("🔍 Image API response length:", responseText.length);
 
                     if (!response.ok) {
+                        console.error("❌ Image API failed:", response.status, responseText);
                         throw new Error('Request failed with status ' + response.status + ': ' + responseText);
                     }
 
                     const result = JSON.parse(responseText);
+                    console.log("🔍 Parsed result:", result.success, result.imageUrl ? 'Has imageUrl' : 'No imageUrl');
                     
                     if (result.success && result.imageUrl) {
-                        console.log("✅ Image generated successfully");
+                        console.log("✅ Image generated successfully, URL length:", result.imageUrl.length);
                         this.updateProgress('image', 70);
                         return result.imageUrl;
                     } else {
+                        console.error("❌ Invalid result:", result);
                         throw new Error(result.error || "Invalid response from backend");
                     }
                 } catch (error) {
-                    console.error("Error generating image:", error);
+                    console.error("❌ Error generating image:", error);
                     this.showError('Failed to generate image: ' + error.message);
                     return null;
                 }
@@ -575,6 +580,20 @@
                     'image ready for custom text overlay'
                 ];
                 
+                // MOVIE POSTER AUTHENTIC COMPOSITION GUIDELINES
+                const posterCompositionRules = [
+                    'authentic movie poster composition layout',
+                    'asymmetrical character placement with dynamic negative space',
+                    'foreground/background depth layers for visual hierarchy',
+                    'dramatic leading lines drawing eye upward to title area',
+                    'characters positioned to create natural text overlay zones',
+                    'professional movie marketing artwork composition',
+                    'theatrical release poster visual structure'
+                ];
+                
+                // Era-specific authentic poster styles
+                const eraVisualStyle = this.getAuthenticPosterStyle(concept.decade, concept.genre);
+                
                 // Hardcore mode modifications
                 let hardcoreElements = '';
                 if (concept.nod_theme) {
@@ -584,32 +603,64 @@
                     } else if (genreLower.includes('sci-fi')) {
                         hardcoreElements = 'dystopian cyberpunk aesthetic, dark futuristic technology, industrial sci-fi elements, brutal alien environments, harsh technological landscapes, gritty space horror vibes, menacing robotic forms (PG-13 appropriate)';
                     } else {
-                        // Default hardcore mode for other genres
                         hardcoreElements = 'intense dramatic atmosphere, dark cinematic mood, harsh lighting contrasts, gritty realism, edgy visual style (PG-13 appropriate)';
                     }
                 }
                 
                 const professionalSpecs = [
-                    `Professional cinematic illustration for "${concept.title || 'Untitled'}"`,
+                    `Professional movie poster artwork for "${concept.title || 'Untitled'}"`,
                     `Genre: ${concept.genre || 'cinematic thriller'}`,
                     `Era: ${concept.decade || 'modern'} authentic visual style`,
+                    eraVisualStyle, // Era-specific poster styling
+                    ...posterCompositionRules, // Authentic poster composition
                     `Visual story: ${concept.synopsis || 'compelling narrative'}`,
                     hardcoreElements, // Add hardcore elements here
-                    'High-end movie artwork composition WITHOUT ANY TEXT',
-                    'Portrait orientation, cinematic framing',
-                    'Professional studio lighting setup',
-                    'Rich color palette with strong visual contrast',
+                    'High-end theatrical poster artwork WITHOUT ANY TEXT',
+                    'Portrait orientation optimized for poster layout',
+                    'Professional movie marketing composition with strategic negative space',
+                    'Film-authentic color grading and lighting',
                     ...textPreventionPrompts,
-                    'Premium movie key art visual elements only',
+                    'Premium theatrical release poster quality',
                     'PG-13 rating appropriate content',
-                    'Professional and tasteful visual presentation'
-                ].filter(Boolean); // Remove any empty strings
+                    'Authentic Hollywood movie poster aesthetic'
+                ].filter(Boolean);
 
                 const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
-                    '. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
+                    '. CRITICAL: This must look like an authentic movie poster with professional composition and film-accurate styling, completely text-free for custom overlay.';
                     
-                console.log('🚫 Enhanced text prevention prompt generated');
+                console.log('🎬 Authentic movie poster prompt generated:', finalPrompt);
                 return finalPrompt;
+            }
+
+            getAuthenticPosterStyle(decade, genre) {
+                const isSciFi = (genre || '').toLowerCase().includes('sci-fi');
+                const isHorror = (genre || '').toLowerCase().includes('horror');
+                
+                const posterStyles = {
+                    '1950s': isHorror 
+                        ? 'classic horror poster style with stark black shadows and dramatic lighting, vintage lithograph aesthetic with hand-painted feel'
+                        : 'retro sci-fi poster with atomic age design elements, clean geometric compositions with bold primary colors',
+                    
+                    '1960s': isSciFi
+                        ? 'space age poster design with mod graphic elements, bold geometric shapes and psychedelic color schemes'
+                        : 'gothic horror poster with high contrast photography and dramatic shadows',
+                        
+                    '1970s': 'gritty 70s poster aesthetic with warm earth tones, airbrushed illustration style, dramatic character montages with overlapping compositions',
+                    
+                    '1980s': isSciFi
+                        ? 'iconic 80s sci-fi poster with neon highlights, chrome effects, and dramatic back-lighting, painted character montage style'
+                        : 'classic 80s horror poster with dark atmospheric lighting and painted illustration elements',
+                        
+                    '1990s': 'polished 90s poster design with photo-realistic character compositions, subtle gradients and clean typography zones',
+                    
+                    '2000s': 'digital poster aesthetic with color-graded photography, character floating in dramatic poses with lens flares',
+                    
+                    '2010s': 'modern poster design with minimalist character placement and sophisticated color palettes, clean negative space',
+                    
+                    '2020s': 'contemporary poster styling with HDR photography aesthetics and refined character positioning'
+                };
+                
+                return posterStyles[decade] || posterStyles['1980s'];
             }
 
             async loadImageToCanvas(imageUrl) {
@@ -624,6 +675,7 @@
                             
                             console.log('📐 Canvas dimensions:', canvas.width, 'x', canvas.height);
                             console.log('📐 Image dimensions:', img.width, 'x', img.height);
+                            console.log('🖼️ Image source length:', imageUrl ? imageUrl.length : 'null');
                             
                             // Clear canvas
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -647,6 +699,11 @@
                             ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
                             
                             console.log('✅ Image loaded to canvas successfully');
+                            
+                            // Debug: Check if anything was actually drawn
+                            const imageData = ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1);
+                            console.log('🔍 Center pixel color:', imageData.data);
+                            
                             resolve();
                             
                         } catch (error) {
@@ -657,10 +714,12 @@
                     
                     img.onerror = (error) => {
                         console.error('❌ Error loading image:', error);
+                        console.error('❌ Image URL:', imageUrl);
                         reject(new Error('Failed to load image'));
                     };
                     
                     // Use normalized URL to avoid CORS issues
+                    console.log('🔄 Loading image from URL...');
                     img.src = normalizeToBlobUrl(imageUrl);
                 });
             }
