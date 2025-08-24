@@ -31,27 +31,36 @@ export default async function handler(req, res) {
             'digital composite': 'modern digital composite'
         };
 
-        function createOptimizedPrompt(concept, visualElements) {
-            const decade = concept.decade || '1980s';
-            const eraMedium = styleHintsByEra[decade] || '';
-            const declaredStyle = (concept.render_style && renderStyleMap[concept.render_style])
-              ? renderStyleMap[concept.render_style] : '';
+		function createOptimizedPrompt(concept, visualElements) {
+			const decade = concept.decade || '1980s';
+			const eraMedium = styleHintsByEra[decade] || '';
+			const declaredStyle = (concept.render_style && renderStyleMap[concept.render_style])
+			  ? renderStyleMap[concept.render_style] : '';
 
-            const nodBias = concept.nod_theme
-              ? 'odd surrealism, uncanny symmetry, dreamlike atmosphere, painterly strangeness (PG-13)'
-              : '';
+			const nodBias = concept.nod_theme
+			  ? 'odd surrealism, uncanny symmetry, dreamlike atmosphere, painterly strangeness (PG-13)'
+			  : '';
 
-            const cleanedElements = (visualElements || '').toString();
+			const cleanedElements = (visualElements || '').toString();
 
-            return [
-                `Professional ${concept.genre || 'cinematic'} movie poster in the ${decade} style.`,
-                declaredStyle || eraMedium,
-                cleanedElements,
-                nodBias,
-                'no text, no logos, cinematic poster, professional, PG-13'
-            ].filter(Boolean).join(' ');
-        }
+			// ENHANCED TEXT PREVENTION
+			const textPreventionInstructions = [
+				'NO TEXT, NO TITLES, NO WORDS, NO LETTERS',
+				'completely text-free image',
+				'visual elements only without typography',
+				'clean composition ready for custom text overlay'
+			].join(', ');
 
+			return [
+				`Professional ${concept.genre || 'cinematic'} movie poster artwork in the ${decade} style.`,
+				declaredStyle || eraMedium,
+				cleanedElements,
+				nodBias,
+				textPreventionInstructions,
+				'no text, no logos, no titles, no credits, no words visible, cinematic poster artwork only, professional, PG-13'
+			].filter(Boolean).join(' ');
+		}
+		
         const prompt = createOptimizedPrompt(concept, visualElements);
 
         let response = await fetch('https://api.openai.com/v1/images/generations', {

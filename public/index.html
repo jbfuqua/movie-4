@@ -511,44 +511,50 @@
                 }
             }
 
-            async generateMovieConcept() {
-                console.log("Generating movie concept...");
-                this.updateProgress('concept', 10);
-                
-                const payload = {
-                    genreFilter: this.elements.genreFilter.value,
-                    eraFilter: this.elements.eraFilter.value,
-                    nodTheme: this.nodTheme
-                };
+			async generateMovieConcept() {
+				console.log("Generating movie concept with enhanced text prevention...");
+				this.updateProgress('concept', 10);
+				
+				const payload = {
+					genreFilter: this.elements.genreFilter.value,
+					eraFilter: this.elements.eraFilter.value,
+					nodTheme: this.nodTheme,
+					// Add specific text prevention flag
+					preventText: true
+				};
 
-                try {
-                    const response = await fetch(this.CONCEPT_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+				try {
+					const response = await fetch(this.CONCEPT_API_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(payload)
+					});
 
-                    const responseText = await response.text();
+					const responseText = await response.text();
 
-                    if (!response.ok) {
-                        throw new Error('Request failed with status ' + response.status + ': ' + responseText);
-                    }
+					if (!response.ok) {
+						throw new Error('Request failed with status ' + response.status + ': ' + responseText);
+					}
 
-                    const result = JSON.parse(responseText);
-                    
-                    if (result.success && result.concept) {
-                        console.log("Concept generated:", result.concept);
-                        this.updateProgress('concept', 30);
-                        return result.concept;
-                    } else {
-                        throw new Error(result.error || "Invalid response from backend");
-                    }
-                } catch (error) {
-                    console.error("Error generating concept:", error);
-                    this.showError('Failed to generate concept: ' + error.message);
-                    return null;
-                }
-            }
+					const result = JSON.parse(responseText);
+					
+					if (result.success && result.concept) {
+						console.log("✅ Concept generated with text prevention:", result.concept);
+						this.updateProgress('concept', 30);
+						
+						// Log text prevention status
+						console.log('🚫 Text prevention measures applied to concept generation');
+						
+						return result.concept;
+					} else {
+						throw new Error(result.error || "Invalid response from backend");
+					}
+				} catch (error) {
+					console.error("Error generating concept:", error);
+					this.showError('Failed to generate concept: ' + error.message);
+					return null;
+				}
+			}
 
             async generateImage(visualElements, concept) {
                 console.log("Generating image...");
@@ -1781,6 +1787,8 @@
                     }
                     
                     console.log('✅ Base image generated');
+					console.log('✅ Base image generated with text prevention measures');
+					console.log('🔍 Image should be text-free for custom overlay');
 
                     this.updateProgress('text', 55);
                     const safeImageUrl = normalizeToBlobUrl(baseImageUrl);
@@ -1852,62 +1860,110 @@
                 return await this.generateMovieConcept();
             }
 
-            buildVisualIntent(concept) {
-                const genrePref = this.elements.genreFilter?.value || 'any';
-                const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
-                const artStyle = this.elements.artStyleFilter?.value || 'authentic';
-                
-                const professionalSpecs = [
-                    `Professional movie poster for "${concept.title}"`,
-                    `Genre: ${concept.genre || 'cinematic thriller'}`,
-                    `Era: ${concept.decade || '1980s'} authentic style`,
-                    `Mood: ${concept.tagline || 'atmospheric and engaging'}`,
-                    `Story: ${concept.synopsis || 'compelling narrative'}`,
-                    
-                    'High-end movie poster composition',
-                    'Portrait orientation, cinematic framing',
-                    'Professional studio lighting',
-                    'Dramatic depth of field',
-                    'Rich color palette with strong contrast',
-                    
-                    this.getStyleDescription(artStyle, eraPref),
-                    
-                    'Premium poster quality',
-                    'Theatrical release standard',
-                    'Sharp focus on main subject',
-                    'Professional color grading',
-                    'No text or titles in image',
-                    'Clean composition for text overlay',
-                    
-                    'PG-13 rating appropriate',
-                    'No graphic violence or gore',
-                    'Professional and tasteful presentation'
-                ];
+			buildVisualIntent(concept) {
+				const genrePref = this.elements.genreFilter?.value || 'any';
+				const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
+				const artStyle = this.elements.artStyleFilter?.value || 'authentic';
+				
+				// ENHANCED TEXT PREVENTION - Multiple strategies
+				const textPreventionPrompts = [
+					// Primary prevention
+					'NO TEXT OR TITLES IN IMAGE',
+					'NO WRITTEN WORDS OR LETTERS VISIBLE',
+					'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
+					'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
+					
+					// Secondary prevention  
+					'no movie titles visible',
+					'no credits or cast names shown',
+					'no taglines or slogans in image',
+					'no studio logos or watermarks',
+					
+					// Tertiary prevention
+					'image ready for custom text overlay',
+					'blank poster template style',
+					'visual elements only, no typography'
+				];
+				
+				// Enhanced visual specifications with stronger text prevention
+				const professionalSpecs = [
+					`Professional movie poster concept for "${concept.title}"`,
+					`Genre: ${concept.genre || 'cinematic thriller'}`,
+					`Era: ${concept.decade || '1980s'} authentic visual style`,
+					`Mood: ${concept.tagline || 'atmospheric and engaging'}`,
+					`Visual story: ${concept.synopsis || 'compelling narrative'}`,
+					
+					// Technical specifications with text prevention
+					'High-end movie poster composition WITHOUT ANY TEXT',
+					'Portrait orientation, cinematic framing',
+					'Professional studio lighting setup',
+					'Dramatic depth of field photography',
+					'Rich color palette with strong visual contrast',
+					
+					// Style specifications
+					this.getEnhancedStyleDescription(artStyle, eraPref),
+					
+					// Quality requirements with text emphasis
+					'Premium poster quality visual elements only',
+					'Theatrical release standard imagery',
+					'Sharp focus on main subject without text',
+					'Professional color grading and composition',
+					'Clean visual composition ready for text overlay',
+					'Image designed specifically for adding custom titles later',
+					
+					// Multiple text prevention strategies
+					...textPreventionPrompts,
+					
+					// Safety constraints
+					'PG-13 rating appropriate content',
+					'No graphic violence or gore',
+					'Professional and tasteful visual presentation'
+				];
 
-                return professionalSpecs.filter(Boolean).join('. ');
-            }
+				const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
+					'. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
+					
+				console.log('🚫 Enhanced text prevention prompt generated');
+				return finalPrompt;
+			}
+			
+			getEnhancedStyleDescription(artStyle, era) {
+				const styleMap = {
+					'authentic': {
+						'1950s': 'hand-painted movie poster artwork without text, vintage lithograph visual style',
+						'1960s': 'mod graphic design elements without text, bold geometric visual shapes',
+						'1970s': 'airbrushed illustration style without text, warm earth tone visuals',
+						'1980s': 'painted character montage without text, neon visual highlights',
+						'1990s': 'photo-composite visual style without text, matte finish photography',
+						'2000s': 'digital photography composite without text, clean visual gradients',
+						'2010s': 'minimalist poster design without text, negative space composition',
+						'2020s': 'contemporary digital art without text, refined visual aesthetic'
+					},
+					'b-movie': 'exaggerated B-movie poster visual style without text, bold dramatic composition ready for custom titles',
+					'photo': 'modern photographic poster composition without text, professional studio photography ready for overlay',
+					'painted': 'classic painted movie poster artwork without text, traditional illustration style ready for custom typography'
+				};
 
-            getStyleDescription(artStyle, era) {
-                const styleMap = {
-                    'authentic': {
-                        '1950s': 'hand-painted movie poster art, vintage lithograph style',
-                        '1960s': 'mod graphic design, bold geometric shapes',
-                        '1970s': 'airbrushed illustration, warm earth tones',
-                        '1980s': 'painted character montage, neon highlights',
-                        '1990s': 'photo-composite style, matte finish',
-                        '2000s': 'digital photography composite, clean gradients',
-                        '2010s': 'minimalist poster design, negative space',
-                        '2020s': 'contemporary digital art, refined aesthetic'
-                    },
-                    'b-movie': 'exaggerated B-movie poster style, bold dramatic composition',
-                    'photo': 'modern photographic poster, professional studio photography',
-                    'painted': 'classic painted movie poster art, traditional illustration'
-                };
-
-                return styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie poster style';
-            }
-        }
-
+				const baseDescription = styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie poster visual style without text';
+				return baseDescription + ', specifically designed for custom text overlay';
+			}			
+			async removeTextFromImage(imageUrl) {
+				// This is a conceptual approach - you'd need additional AI services for text detection/removal
+				// For now, we'll focus on prevention in the prompt
+				
+				console.log('🔍 Checking image for unwanted text...');
+				
+				// Could potentially use:
+				// - Google Vision API for text detection
+				// - Azure Cognitive Services
+				// - AWS Rekognition
+				// - Custom ML model
+				
+				// For immediate solution, rely on enhanced prompting
+				return imageUrl;
+			}
+			
+			
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing EnhancedPosterAI...');
             window.posterAI = new EnhancedPosterAI();
