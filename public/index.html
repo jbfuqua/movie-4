@@ -1781,11 +1781,23 @@
 
                     this.updateProgress('image', 35);
                     const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
-                    if (!baseImageUrl) { 
-                        this.setLoadingState(false); 
-                        return; 
-                    }
-                    
+					if (!baseImageUrl) {
+						// Auto-retry the entire generation process
+						const currentRetries = arguments[0] || 0;
+						if (currentRetries < 2) {
+							console.log(`🔄 Retrying entire generation process (${currentRetries + 1}/2)...`);
+							this.setLoadingState(false);
+							setTimeout(() => {
+								this.handleGeneration(currentRetries + 1);
+							}, 3000);
+							return;
+						}
+						
+						// Max retries reached, show error
+						this.setLoadingState(false); 
+						this.showError('Failed to generate image after multiple attempts. Please try again.');
+						return; 
+					}                  
                     console.log('✅ Base image generated');
 					console.log('✅ Base image generated with text prevention measures');
 					console.log('🔍 Image should be text-free for custom overlay');
@@ -1848,10 +1860,23 @@
                         }, 1000);
                     }
 
-                } catch (error) {
-                    console.error('❌ Error in professional generation process:', error);
-                    this.showError?.('Generation failed: ' + (error?.message || 'Unknown error'));
-                } finally {
+				 } catch (error) {
+					console.error("Error generating image:", error);
+					
+					// Auto-retry on certain errors
+					if (retryCount < maxRetries && 
+						(error.name === 'AbortError' || 
+						 error.message.includes('timeout') ||
+						 error.message.includes('500'))) {
+						
+						console.log(`🔄 Auto-retrying image generation (${retryCount + 1}/${maxRetries})`);
+						await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
+						return this.generateImage(visualElements, concept, retryCount + 1);
+					}
+					
+					this.showError('Failed to generate image: ' + error.message);
+					return null;					
+				} finally {
                     this.setLoadingState(false);
                 }
             }
