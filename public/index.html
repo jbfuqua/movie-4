@@ -1583,6 +1583,7 @@
                     this.elements.posterImage.classList.add('hidden');
                     this.elements.btnText.textContent = 'Generating...';
                     this.updateStatus('generating', 'Generating');
+                    console.log('🔄 Loading state ON - loader visible, poster hidden');
                 } else {
                     this.elements.loader.classList.add('hidden');
                     this.elements.posterImage.classList.remove('hidden');
@@ -1590,6 +1591,7 @@
                     this.updateStatus('ready', 'Ready');
                     this.elements.saveBtn.disabled = false;
                     this.elements.shareBtn.disabled = false;
+                    console.log('✅ Loading state OFF - loader hidden, poster visible');
                 }
             }
 
@@ -1795,10 +1797,15 @@
 
                     // Step 5: Display final poster
                     const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
+                    
+                    // CRITICAL: Make sure we show the poster image
                     this.elements.posterImage.src = finalImageUrl;
+                    this.elements.posterImage.classList.remove('hidden');
+                    this.elements.loader.classList.add('hidden');
                     
                     console.log('✅ Final poster URL created, length:', finalImageUrl.length);
                     console.log('✅ Image src set to poster element');
+                    console.log('✅ Poster image should now be visible');
 
                     // Update counters and history
                     this.generationCount++;
