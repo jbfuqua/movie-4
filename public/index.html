@@ -1946,25 +1946,9 @@
 
 				const baseDescription = styleMap[artStyle]?.[era] || styleMap[artStyle] || 'professional movie poster visual style without text';
 				return baseDescription + ', specifically designed for custom text overlay';
-			}			
-			async removeTextFromImage(imageUrl) {
-				// This is a conceptual approach - you'd need additional AI services for text detection/removal
-				// For now, we'll focus on prevention in the prompt
-				
-				console.log('🔍 Checking image for unwanted text...');
-				
-				// Could potentially use:
-				// - Google Vision API for text detection
-				// - Azure Cognitive Services
-				// - AWS Rekognition
-				// - Custom ML model
-				
-				// For immediate solution, rely on enhanced prompting
-				return imageUrl;
-			}
+			}	
 			
-			
-        document.addEventListener('DOMContentLoaded', function() {
+       document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing EnhancedPosterAI...');
             window.posterAI = new EnhancedPosterAI();
         });
