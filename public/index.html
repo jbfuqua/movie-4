@@ -1832,7 +1832,11 @@
                     
                     const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
                     this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
+					this.elements.posterImage.classList.remove('hidden');
+					this.elements.loader.classList.add('hidden');
 
+					console.log("✅ Poster image displayed");
+					
                     this.generationCount++;
                     if (this.elements.generationCounter) {
                         const plural = this.generationCount === 1 ? 'poster' : 'posters';
