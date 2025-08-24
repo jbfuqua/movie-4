@@ -1763,127 +1763,112 @@
             }
 
             // UPDATED GENERATION FUNCTION
-            async handleGeneration() {
-                try {
-                    console.log('🎬 Starting professional poster generation...');
-                    this.clearError?.();
-                    this.setLoadingState(true);
+			 async handleGeneration(retryCount = 0, maxRetries = 2) {
+				try {
+					console.log('🎬 Starting professional poster generation...');
+					this.clearError?.();
+					this.setLoadingState(true);
 
-                    const concept = await this.generateConcept();
-                    if (!concept) { 
-                        this.setLoadingState(false); 
-                        return; 
-                    }
-                    
-                    console.log('✅ Concept generated:', concept.title);
-                    this.currentConcept = concept;
-                    this.updateInfo?.(concept);
+					// ✅ FIX: call correct concept method
+					const concept = await this.generateMovieConcept();
+					if (!concept) { 
+						this.setLoadingState(false); 
+						return; 
+					}
 
-                    this.updateProgress('image', 35);
-                    const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
+					console.log('✅ Concept generated:', concept.title);
+					this.currentConcept = concept;
+					this.updateInfo?.(concept);
+
+					this.updateProgress('image', 35);
+					const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
 					if (!baseImageUrl) {
-						// Auto-retry the entire generation process
-						const currentRetries = arguments[0] || 0;
-						if (currentRetries < 2) {
-							console.log(`🔄 Retrying entire generation process (${currentRetries + 1}/2)...`);
+						if (retryCount < maxRetries) {
+							console.log(`🔄 Retrying entire generation process (${retryCount + 1}/${maxRetries})...`);
 							this.setLoadingState(false);
-							setTimeout(() => {
-								this.handleGeneration(currentRetries + 1);
-							}, 3000);
+							setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
 							return;
 						}
-						
-						// Max retries reached, show error
-						this.setLoadingState(false); 
+						this.setLoadingState(false);
 						this.showError('Failed to generate image after multiple attempts. Please try again.');
-						return; 
-					}                  
-                    console.log('✅ Base image generated');
-					console.log('✅ Base image generated with text prevention measures');
-					console.log('🔍 Image should be text-free for custom overlay');
+						return;
+					}
 
-                    this.updateProgress('text', 55);
-                    const safeImageUrl = normalizeToBlobUrl(baseImageUrl);
-                    await this.smartCropToInstagramRatio(safeImageUrl);
-                    
-                    console.log('✅ Image cropped and optimized');
+					console.log('✅ Base image generated (text prevention applied)');
 
-                    this.updateProgress('text', 65);
-                    this.addGradientOverlays?.();
-                    
-                    this.updateProgress('text', 75);
-                    await this.renderTitleAndCredits(concept);
-                    
-                    console.log('✅ Professional typography rendered');
+					this.updateProgress('text', 55);
+					const safeImageUrl = normalizeToBlobUrl(baseImageUrl);
+					await this.smartCropToInstagramRatio(safeImageUrl);
 
-                    this.updateProgress('text', 85);
-                    this.addProfessionalEffects?.(concept);
-                    
-                    console.log('✅ Professional effects applied');
+					console.log('✅ Image cropped and optimized');
 
-                    if (typeof this.generateAISongRecommendation === 'function') {
-                        this.updateProgress('song', 90);
-                        this.generateAISongRecommendation(concept).catch(err => {
-                            console.warn('Song generation failed:', err);
-                        });
-                    }
+					this.updateProgress('text', 65);
+					this.addGradientOverlays?.();
 
-                    this.updateProgress('complete', 100);
-                    
-                    const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
-                    this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
+					this.updateProgress('text', 75);
+					await this.renderTitleAndCredits(concept);
+					console.log('✅ Professional typography rendered');
+
+					this.updateProgress('text', 85);
+					this.addProfessionalEffects?.(concept);
+					console.log('✅ Professional effects applied');
+
+					// 🎵 Song recommendation
+					if (typeof this.generateAISongRecommendation === 'function') {
+						this.updateProgress('song', 90);
+						this.generateAISongRecommendation(concept).catch(err => {
+							console.warn('Song generation failed:', err);
+						});
+					}
+
+					this.updateProgress('complete', 100);
+
+					// ✅ Show poster as <img> from canvas
+					const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
+					this.elements.posterImage.src = normalizeToBlobUrl(finalImageUrl);
 					this.elements.posterImage.classList.remove('hidden');
 					this.elements.loader.classList.add('hidden');
-
 					console.log("✅ Poster image displayed");
-					
-                    this.generationCount++;
-                    if (this.elements.generationCounter) {
-                        const plural = this.generationCount === 1 ? 'poster' : 'posters';
-                        this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
-                    }
 
-                    if (!this.recentPosters) this.recentPosters = [];
-                    this.recentPosters.unshift({ 
-                        imageUrl: finalImageUrl, 
-                        concept,
-                        timestamp: Date.now()
-                    });
-                    
-                    if (this.recentPosters.length > 12) {
-                        this.recentPosters = this.recentPosters.slice(0, 12);
-                    }
-                    
-                    this.updateRecentDisplay?.();
-
-                    console.log('🎉 Professional poster generation complete!');
-                    
-                    if (this.autoGenerate) {
-                        setTimeout(() => {
-                            this.startAutoTimer?.();
-                        }, 1000);
-                    }
-
-				 } catch (error) {
-					console.error("Error generating image:", error);
-					
-					// Auto-retry on certain errors
-					if (retryCount < maxRetries && 
-						(error.name === 'AbortError' || 
-						 error.message.includes('timeout') ||
-						 error.message.includes('500'))) {
-						
-						console.log(`🔄 Auto-retrying image generation (${retryCount + 1}/${maxRetries})`);
-						await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s
-						return this.generateImage(visualElements, concept, retryCount + 1);
+					// Update counters + history
+					this.generationCount++;
+					if (this.elements.generationCounter) {
+						const plural = this.generationCount === 1 ? 'poster' : 'posters';
+						this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
 					}
-					
+
+					if (!this.recentPosters) this.recentPosters = [];
+					this.recentPosters.unshift({ imageUrl: finalImageUrl, concept, timestamp: Date.now() });
+					if (this.recentPosters.length > 12) {
+						this.recentPosters = this.recentPosters.slice(0, 12);
+					}
+					this.updateRecentDisplay?.();
+
+					console.log('🎉 Professional poster generation complete!');
+
+					if (this.autoGenerate) {
+						setTimeout(() => this.startAutoTimer?.(), 1000);
+					}
+
+				} catch (error) {
+					console.error("❌ Error generating image:", error);
+
+					if (retryCount < maxRetries && (
+						error.name === 'AbortError' ||
+						error.message.includes('timeout') ||
+						error.message.includes('500'))
+					) {
+						console.log(`🔄 Auto-retrying image generation (${retryCount + 1}/${maxRetries})`);
+						await new Promise(resolve => setTimeout(resolve, 2000));
+						return this.handleGeneration(retryCount + 1, maxRetries);
+					}
+
 					this.showError('Failed to generate image: ' + error.message);
-					return null;					
+					return null;
 				} finally {
-                    this.setLoadingState(false);
-                }
-            }
+					this.setLoadingState(false);
+				}
+			}
 
             async generateConcept() {
                 return await this.generateMovieConcept();
