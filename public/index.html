@@ -671,23 +671,56 @@
                 const w = canvas.width;
                 const h = canvas.height;
 
-                // Top gradient for title area
-                const topGradient = ctx.createLinearGradient(0, 0, 0, h * 0.25);
-                topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
-                topGradient.addColorStop(0.7, 'rgba(0, 0, 0, 0.3)');
+                // ENHANCED MOVIE POSTER OVERLAYS for authentic feel
+                
+                // 1. Subtle film vignette for depth
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                const vignette = ctx.createRadialGradient(w/2, h*0.4, 0, w/2, h*0.4, Math.max(w, h) * 0.8);
+                vignette.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                vignette.addColorStop(0.6, 'rgba(255, 255, 255, 0.95)');
+                vignette.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+                ctx.fillStyle = vignette;
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
+
+                // 2. Top gradient for title area (stronger for better text readability)
+                const topGradient = ctx.createLinearGradient(0, 0, 0, h * 0.35);
+                topGradient.addColorStop(0, 'rgba(0, 0, 0, 0.9)');
+                topGradient.addColorStop(0.4, 'rgba(0, 0, 0, 0.6)');
                 topGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 ctx.fillStyle = topGradient;
-                ctx.fillRect(0, 0, w, h * 0.25);
+                ctx.fillRect(0, 0, w, h * 0.35);
 
-                // Bottom gradient for credits area
-                const bottomGradient = ctx.createLinearGradient(0, h, 0, h * 0.75);
-                bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-                bottomGradient.addColorStop(0.5, 'rgba(0, 0, 0, 0.4)');
+                // 3. Bottom gradient for credits area (enhanced)
+                const bottomGradient = ctx.createLinearGradient(0, h, 0, h * 0.7);
+                bottomGradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
+                bottomGradient.addColorStop(0.3, 'rgba(0, 0, 0, 0.7)');
                 bottomGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
                 ctx.fillStyle = bottomGradient;
-                ctx.fillRect(0, h * 0.75, w, h * 0.25);
+                ctx.fillRect(0, h * 0.7, w, h * 0.3);
                 
-                console.log('✅ Gradient overlays added');
+                // 4. Side gradients for wider cinematic feel
+                ctx.save();
+                ctx.globalCompositeOperation = 'multiply';
+                
+                // Left edge
+                const leftGradient = ctx.createLinearGradient(0, 0, w * 0.15, 0);
+                leftGradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+                leftGradient.addColorStop(1, 'rgba(255, 255, 255, 1)');
+                ctx.fillStyle = leftGradient;
+                ctx.fillRect(0, 0, w * 0.15, h);
+                
+                // Right edge  
+                const rightGradient = ctx.createLinearGradient(w, 0, w * 0.85, 0);
+                rightGradient.addColorStop(0, 'rgba(0, 0, 0, 0.3)');
+                rightGradient.addColorStop(1, 'rgba(255, 255, 255, 1)');
+                ctx.fillStyle = rightGradient;
+                ctx.fillRect(w * 0.85, 0, w * 0.15, h);
+                
+                ctx.restore();
+                
+                console.log('✅ Enhanced movie poster overlays applied');
             }
 
             renderTitleAndCredits(concept) {
@@ -794,14 +827,15 @@
                 const titleText = (concept?.title || 'UNTITLED').toUpperCase();
                 const tagline = concept?.tagline || '';
                 
-                // Calculate font sizes
-                let titleSize = Math.min(Math.floor(w / 8), 120);
-                const taglineSize = Math.floor(titleSize * 0.3);
+                // MOVIE POSTER AUTHENTIC TITLE POSITIONING
+                // Most movie posters place titles in upper 1/3, not at 15%
+                let titleSize = Math.min(Math.floor(w / 7), 140); // Slightly larger for impact
+                const taglineSize = Math.floor(titleSize * 0.32); // Better proportion
                 
-                const titleY = h * 0.15;
-                const maxTitleWidth = w * 0.9;
+                const titleY = h * 0.12; // Moved up for more authentic placement
+                const maxTitleWidth = w * 0.85;
                 
-                // Title with era-specific styling
+                // Title with enhanced movie poster styling
                 ctx.save();
                 ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
                 ctx.textAlign = 'center';
@@ -810,42 +844,71 @@
                 // Auto-resize if too wide
                 let titleWidth = ctx.measureText(titleText).width;
                 while (titleWidth > maxTitleWidth && titleSize > 32) {
-                    titleSize -= 4;
+                    titleSize -= 3;
                     ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
                     titleWidth = ctx.measureText(titleText).width;
                 }
                 
-                // Title shadow
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillText(titleText, w / 2 + 3, titleY + 3);
+                // MOVIE POSTER TITLE EFFECTS - Multiple layers for depth
                 
-                // Title with glow
+                // 1. Deep shadow base
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                ctx.fillText(titleText, w / 2 + 4, titleY + 6);
+                
+                // 2. Medium shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillText(titleText, w / 2 + 2, titleY + 3);
+                
+                // 3. Glow layer
                 ctx.shadowColor = styling.titleGlow;
-                ctx.shadowBlur = styling.glowIntensity;
+                ctx.shadowBlur = styling.glowIntensity * 1.5;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
                 ctx.fillStyle = styling.titleColor;
                 ctx.fillText(titleText, w / 2, titleY);
                 
+                // 4. Bright highlight layer for pop
+                if (styling.glowIntensity > 10) {
+                    ctx.shadowBlur = styling.glowIntensity * 0.5;
+                    ctx.fillStyle = this.getBrightHighlight(styling.titleColor);
+                    ctx.fillText(titleText, w / 2, titleY);
+                }
+                
                 ctx.restore();
                 
-                // Tagline
-                if (tagline) {
+                // TAGLINE with better movie poster positioning
+                if (tagline && tagline.length > 0) {
                     ctx.save();
                     ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     
-                    const taglineY = titleY + titleSize * 0.8;
+                    // Position tagline below title with proper spacing
+                    const taglineY = titleY + (titleSize * 0.7) + (taglineSize * 0.6);
                     
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                    ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
+                    // Enhanced tagline effects
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.fillText(tagline, w / 2 + 2, taglineY + 3);
                     
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 4;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.shadowBlur = 6;
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 2;
                     ctx.fillText(tagline, w / 2, taglineY);
                     
                     ctx.restore();
                 }
+            }
+
+            getBrightHighlight(baseColor) {
+                // Convert base color to a brighter highlight
+                if (baseColor.includes('#')) {
+                    return '#ffffff';
+                } else if (baseColor.includes('rgb')) {
+                    return 'rgba(255, 255, 255, 0.8)';
+                }
+                return '#ffffff';
             }
 
             renderProfessionalCredits(ctx, concept, w, h, styling) {
@@ -1044,8 +1107,119 @@
                 return directors[Math.floor(Math.random() * directors.length)];
             }
 
-            cleanActorName(actor) {
-                return String(actor).split(' AS ')[0].trim().toUpperCase();
+            addAuthenticPosterEffects(concept) {
+                const canvas = this.elements.canvas;
+                const ctx = this.ctx;
+                const w = canvas.width;
+                const h = canvas.height;
+                
+                // 1. Film grain for authentic texture
+                this.addFilmGrain(ctx, w, h, 0.08);
+                
+                // 2. Era-specific poster effects
+                this.addEraSpecificEffects(concept.decade, ctx, w, h);
+                
+                // 3. Subtle color temperature adjustment
+                this.addColorGrading(concept, ctx, w, h);
+                
+                console.log('✅ Authentic poster effects completed');
+            }
+
+            addFilmGrain(ctx, width, height, intensity = 0.08) {
+                ctx.save();
+                ctx.globalAlpha = intensity;
+                ctx.globalCompositeOperation = 'overlay';
+                
+                const imageData = ctx.createImageData(width, height);
+                const data = imageData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const noise = (Math.random() - 0.5) * 255;
+                    data[i] = 128 + noise * 0.3;     // R
+                    data[i + 1] = 128 + noise * 0.3; // G  
+                    data[i + 2] = 128 + noise * 0.3; // B
+                    data[i + 3] = intensity * 255;   // A
+                }
+                
+                ctx.putImageData(imageData, 0, 0);
+                ctx.restore();
+            }
+
+            addEraSpecificEffects(decade, ctx, w, h) {
+                ctx.save();
+                
+                switch (decade) {
+                    case '1950s':
+                    case '1960s':
+                        // Vintage halftone dot pattern effect
+                        ctx.globalAlpha = 0.03;
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                        for (let x = 0; x < w; x += 8) {
+                            for (let y = 0; y < h; y += 8) {
+                                if (Math.random() > 0.7) {
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, 1, 0, Math.PI * 2);
+                                    ctx.fill();
+                                }
+                            }
+                        }
+                        break;
+                        
+                    case '1970s':
+                        // Slight color separation effect
+                        ctx.globalAlpha = 0.05;
+                        ctx.globalCompositeOperation = 'multiply';
+                        ctx.fillStyle = 'rgba(255, 165, 0, 0.1)';
+                        ctx.fillRect(0, 0, w, h);
+                        break;
+                        
+                    case '1980s':
+                        // Subtle scan lines
+                        ctx.globalAlpha = 0.04;
+                        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+                        ctx.lineWidth = 0.5;
+                        for (let y = 0; y < h; y += 6) {
+                            ctx.beginPath();
+                            ctx.moveTo(0, y);
+                            ctx.lineTo(w, y);
+                            ctx.stroke();
+                        }
+                        break;
+                        
+                    case '2000s':
+                        // Digital compression artifacts (very subtle)
+                        ctx.globalAlpha = 0.02;
+                        ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
+                        for (let x = 0; x < w; x += 16) {
+                            ctx.fillRect(x, 0, 1, h);
+                        }
+                        break;
+                }
+                
+                ctx.restore();
+            }
+
+            addColorGrading(concept, ctx, w, h) {
+                const genre = (concept.genre || '').toLowerCase();
+                const isHardcore = concept.nod_theme;
+                
+                ctx.save();
+                ctx.globalCompositeOperation = 'overlay';
+                ctx.globalAlpha = isHardcore ? 0.12 : 0.06;
+                
+                if (genre.includes('horror')) {
+                    // Warm, ominous color grade
+                    ctx.fillStyle = isHardcore ? 'rgba(139, 0, 0, 0.3)' : 'rgba(255, 140, 0, 0.2)';
+                } else if (genre.includes('sci-fi')) {
+                    // Cool, futuristic color grade  
+                    ctx.fillStyle = isHardcore ? 'rgba(0, 50, 100, 0.3)' : 'rgba(0, 150, 255, 0.2)';
+                } else {
+                    // Neutral cinematic grade
+                    ctx.fillStyle = 'rgba(100, 120, 140, 0.1)';
+                }
+                
+                ctx.fillRect(0, 0, w, h);
+                ctx.restore();
             }
 
             updateInfo(concept) {
@@ -1517,13 +1691,18 @@
                     console.log('✅ Image loaded to canvas');
 
                     // Step 4: Add overlays and text
-                    this.updateProgress('text', 75);
-                    this.addGradientOverlays();
-                    console.log('✅ Gradients applied');
-
                     this.updateProgress('text', 85);
-                    this.renderTitleAndCredits(concept);
-                    console.log('✅ Title and credits rendered');
+                    this.addGradientOverlays();
+                    console.log('✅ Enhanced movie poster overlays applied');
+
+                    this.updateProgress('text', 90);
+                    await this.renderTitleAndCredits(concept);
+                    console.log('✅ Authentic movie poster typography rendered');
+
+                    // Add film grain and authentic poster effects
+                    this.updateProgress('text', 95);
+                    this.addAuthenticPosterEffects(concept);
+                    console.log('✅ Authentic poster effects applied');
 
                     this.updateProgress('complete', 100);
 
