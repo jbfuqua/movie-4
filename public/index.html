@@ -101,6 +101,19 @@
                 font-size: 16px;
             }
         }
+		
+		@media (min-width: 769px) {
+			#poster-container {
+				aspect-ratio: 4 / 5 !important; /* Match your canvas ratio exactly */
+			}
+			
+			#poster-image {
+				width: 100% !important;
+				height: 100% !important;
+				object-fit: contain !important;
+				object-position: center !important;
+			}
+		}
         
         canvas {
             will-change: contents;
@@ -783,63 +796,119 @@
                 return eraStyles[decade] || eraStyles['1980s'];
             }
 
-            renderProfessionalTitle(ctx, concept, w, h, styling) {
-                const titleText = (concept?.title || 'UNTITLED').toUpperCase();
-                const tagline = concept?.tagline || '';
-                
-                // Calculate font sizes
-                let titleSize = Math.min(Math.floor(w / 8), 120);
-                const taglineSize = Math.floor(titleSize * 0.3);
-                
-                const titleY = h * 0.15;
-                const maxTitleWidth = w * 0.9;
-                
-                // Title with era-specific styling
-                ctx.save();
-                ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                // Auto-resize if too wide
-                let titleWidth = ctx.measureText(titleText).width;
-                while (titleWidth > maxTitleWidth && titleSize > 32) {
-                    titleSize -= 4;
-                    ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
-                    titleWidth = ctx.measureText(titleText).width;
-                }
-                
-                // Title shadow
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillText(titleText, w / 2 + 3, titleY + 3);
-                
-                // Title with glow
-                ctx.shadowColor = styling.titleGlow;
-                ctx.shadowBlur = styling.glowIntensity;
-                ctx.fillStyle = styling.titleColor;
-                ctx.fillText(titleText, w / 2, titleY);
-                
-                ctx.restore();
-                
-                // Tagline
-                if (tagline) {
-                    ctx.save();
-                    ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    
-                    const taglineY = titleY + titleSize * 0.8;
-                    
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                    ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
-                    
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                    ctx.shadowBlur = 4;
-                    ctx.fillText(tagline, w / 2, taglineY);
-                    
-                    ctx.restore();
-                }
-            }
+// Replace your renderProfessionalTitle function with this enhanced version:
+
+			renderProfessionalTitle(ctx, concept, w, h, styling) {
+				const titleText = (concept?.title || 'UNTITLED').toUpperCase();
+				const tagline = concept?.tagline || '';
+				
+				// Calculate font sizes
+				let titleSize = Math.min(Math.floor(w / 8), 120);
+				const taglineSize = Math.floor(titleSize * 0.3);
+				
+				const titleY = h * 0.15;
+				const maxTitleWidth = w * 0.9;
+				
+				// Title with era-specific styling
+				ctx.save();
+				ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+				
+				// Auto-resize if too wide
+				let titleWidth = ctx.measureText(titleText).width;
+				while (titleWidth > maxTitleWidth && titleSize > 32) {
+					titleSize -= 4;
+					ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
+					titleWidth = ctx.measureText(titleText).width;
+				}
+				
+				// Title shadow
+				ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+				ctx.fillText(titleText, w / 2 + 3, titleY + 3);
+				
+				// Title with glow
+				ctx.shadowColor = styling.titleGlow;
+				ctx.shadowBlur = styling.glowIntensity;
+				ctx.fillStyle = styling.titleColor;
+				ctx.fillText(titleText, w / 2, titleY);
+				
+				ctx.restore();
+				
+				// ENHANCED: Dynamic tagline wrapping
+				if (tagline) {
+					ctx.save();
+					ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
+					ctx.textAlign = 'center';
+					ctx.textBaseline = 'middle';
+					
+					const taglineY = titleY + titleSize * 0.8;
+					const maxTaglineWidth = w * 0.85; // Slightly narrower than title
+					const lineHeight = taglineSize * 1.2;
+					
+					// Check if tagline needs wrapping
+					const taglineWidth = ctx.measureText(tagline).width;
+					
+					if (taglineWidth <= maxTaglineWidth) {
+						// Single line tagline
+						ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+						ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
+						
+						ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+						ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+						ctx.shadowBlur = 4;
+						ctx.fillText(tagline, w / 2, taglineY);
+					} else {
+						// Multi-line tagline wrapping
+						const words = tagline.split(' ');
+						const lines = [];
+						let currentLine = '';
+						
+						for (let i = 0; i < words.length; i++) {
+							const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+							const testWidth = ctx.measureText(testLine).width;
+							
+							if (testWidth > maxTaglineWidth && currentLine) {
+								lines.push(currentLine);
+								currentLine = words[i];
+							} else {
+								currentLine = testLine;
+							}
+						}
+						
+						if (currentLine) {
+							lines.push(currentLine);
+						}
+						
+						// Limit to 2 lines max
+						if (lines.length > 2) {
+							lines[1] = lines[1] + '...';
+							lines.length = 2;
+						}
+						
+						// Calculate starting Y position for centered multi-line text
+						const totalHeight = lines.length * lineHeight;
+						const startY = taglineY - (totalHeight / 2) + (lineHeight / 2);
+						
+						// Render each line
+						lines.forEach((line, index) => {
+							const lineY = startY + (index * lineHeight);
+							
+							// Shadow
+							ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+							ctx.fillText(line, w / 2 + 2, lineY + 2);
+							
+							// Main text
+							ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+							ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+							ctx.shadowBlur = 4;
+							ctx.fillText(line, w / 2, lineY);
+						});
+					}
+					
+					ctx.restore();
+				}
+			}
 
             renderProfessionalCredits(ctx, concept, w, h, styling) {
                 const creditZones = {
