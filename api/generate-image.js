@@ -1,4 +1,4 @@
-// api/generate-image.js - Fixed for Vercel deployment
+// api/generate-image-gemini.js - Gemini Imagen 3 Implementation
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -9,27 +9,18 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
 
-  console.log('🎨 generate-image called');
+  console.log('🎨 generate-image-gemini called');
 
   try {
-    // Check API key first
-    const openaiKey = process.env.OPENAI_API_KEY;
-    if (!openaiKey) {
-      console.error('❌ OPENAI_API_KEY missing');
-      return res.status(500).json({ success: false, error: 'OpenAI API key not configured' });
+    // Check for Gemini API key
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!geminiKey) {
+      console.error('❌ GEMINI_API_KEY missing');
+      return res.status(500).json({ success: false, error: 'Gemini API key not configured' });
     }
 
-    // Parse request body safely
-    let requestBody;
-    try {
-      requestBody = req.body || {};
-    } catch (bodyError) {
-      console.error('❌ Request body parsing failed:', bodyError);
-      return res.status(400).json({ success: false, error: 'Invalid request body' });
-    }
-
-    const { visualElements = '', concept = {} } = requestBody;
-
+    const { visualElements = '', concept = {} } = req.body;
+    
     console.log('📋 Request params:', { 
       hasVisualElements: !!visualElements, 
       hasConceptTitle: !!concept.title,
@@ -38,161 +29,157 @@ export default async function handler(req, res) {
       nodTheme: concept.nod_theme
     });
 
-    const styleHintsByEra = {
-      '1950s': 'hand-painted lithograph, gouache wash, visible brush strokes, offset misregistration, canvas tooth, fold wear',
-      '1960s': 'silkscreen print, bold mod shapes, halftone dot pattern, slight ink bleed',
-      '1970s': 'airbrushed illustration, matte texture, paper aging, fold marks',
-      '1980s': 'painted montage with chrome gradients, bloom highlights, VHS scanlines',
-      '1990s': 'studio photo-composite, subtle grain, subdued palette',
-      '2000s': 'digital composite, clean gradients',
-      '2010s': 'minimalist photographic art, negative space',
-      '2020s': 'contemporary digital HDR, refined grading'
-    };
-
-    const renderStyleMap = {
-      'hand-painted lithograph': 'hand-painted lithograph, gouache wash',
-      'silkscreen halftone': 'silkscreen print, halftone texture',
-      'airbrushed illustration': 'airbrushed retro paint style',
-      'painted montage': 'painted character montage, layered composition',
-      'studio photo-composite': 'studio photographic composite, pro lighting',
-      'digital composite': 'modern digital composite'
-    };
-
-    function createOptimizedPrompt(concept, visualElements) {
+    // Imagen 3 works better with cleaner, more direct prompts
+    function createImagenPrompt(concept, visualElements) {
       const decade = concept.decade || '1980s';
-      const eraMedium = styleHintsByEra[decade] || styleHintsByEra['1980s'];
-      const declaredStyle = (concept.render_style && renderStyleMap[concept.render_style])
-        ? renderStyleMap[concept.render_style] : '';
+      const genre = concept.genre || 'cinematic';
+      
+      const styleMap = {
+        '1950s': 'vintage painted portrait style with warm color palette',
+        '1960s': 'retro illustration with bold geometric shapes and pop art influence',
+        '1970s': 'airbrushed painting with soft gradients and earthy tones',
+        '1980s': 'neon-lit cinematic portrait with dramatic shadows and vibrant colors',
+        '1990s': 'digital matte painting with photorealistic details',
+        '2000s': 'polished digital artwork with clean composition',
+        '2010s': 'minimalist portrait with negative space and contemporary aesthetics',
+        '2020s': 'modern digital painting with atmospheric lighting'
+      };
 
-      const nodBias = concept.nod_theme
-        ? 'odd surrealism, uncanny symmetry, dreamlike atmosphere, painterly strangeness (PG-13)'
-        : '';
-
-      const cleanedElements = String(visualElements || '');
-
-      // STRONGEST TEXT PREVENTION - AVOID "POSTER" ENTIRELY
-      const textPreventionInstructions = [
-        'CHARACTER PORTRAIT CONCEPT ART ONLY',
-        'film development artwork without any text elements',
-        'clean character illustration for design purposes',
-        'concept art study - no typography or written words',
-        'visual development art - text overlay will be added later',
-        'portrait study for film production, no embedded text'
-      ].join('. ');
-
+      const styleHint = styleMap[decade] || styleMap['1980s'];
+      
+      // Imagen 3 responds well to art-focused language
       const promptParts = [
-        textPreventionInstructions,
-        `Professional character portrait study for ${concept.genre || 'cinematic'} film in ${decade} style.`,
-        'Film development **concept art, character/environment reference only (no titles or credits).**',
-        'Character-focused artwork study, not marketing material.',
-        declaredStyle || eraMedium,
-        cleanedElements,
-        nodBias,
-        'Character study illustration, film production art, PG-13',
-		'Absolutely no text, titles, names, signatures, letters, logos, or credits inside the image.'
+        'Portrait painting of a character',
+        `${genre} film aesthetic from the ${decade}`,
+        styleHint,
+        visualElements,
+        'Professional concept art illustration',
+        'No text, no words, no letters anywhere in the image'
       ].filter(Boolean);
 
-      return promptParts.join(' ');
+      return promptParts.join(', ');
     }
 
-    const prompt = createOptimizedPrompt(concept, visualElements);
-    console.log('🎯 Generated prompt (length: ' + prompt.length + ')');
+    const prompt = createImagenPrompt(concept, visualElements);
+    console.log('🎯 Imagen prompt:', prompt);
 
-    // Retry logic with exponential backoff
-    async function callOpenAIImageGen(attempt = 1) {
-      console.log(`🤖 Calling OpenAI (attempt ${attempt})...`);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
-
-      try {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${openaiKey}`
-          },
-          body: JSON.stringify({
-            model: "dall-e-3",
-            prompt: prompt,
-            n: 1,
-            size: "1024x1024",
-            response_format: "b64_json"
-          }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        console.log('📡 OpenAI response status:', response.status);
-
-        if (!response.ok) {
-          const errText = await response.text();
-          console.error('❌ OpenAI API error:', response.status, errText);
-          
-          if (attempt < 3 && (response.status === 500 || response.status === 502 || response.status === 503)) {
-            const wait = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
-            console.warn(`⚠️ Retrying in ${wait}ms...`);
-            await new Promise(r => setTimeout(r, wait));
-            return callOpenAIImageGen(attempt + 1);
-          }
-          
-          throw new Error(`OpenAI API error ${response.status}: ${errText}`);
+    // Call Gemini API with Imagen 3
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage?key=${geminiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        config: {
+          aspectRatio: "ASPECT_RATIO_1_1", // Square format like DALL-E
+          negativePrompt: "text, words, letters, typography, titles, credits, signatures, logos, watermarks, captions",
+          sampleCount: 1
         }
+      })
+    });
 
-        const result = await response.json();
-        console.log('📦 OpenAI response parsed successfully');
+    console.log('📡 Gemini response status:', response.status);
 
-        if (!result?.data?.[0]?.b64_json) {
-          throw new Error("OpenAI returned no image data (empty b64_json)");
-        }
-
-        const imageUrl = `data:image/png;base64,${result.data[0].b64_json}`;
-        console.log('✅ Image generated successfully (length: ' + imageUrl.length + ')');
-        return imageUrl;
-
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        
-        if (fetchError.name === 'AbortError') {
-          console.error('❌ Request timeout');
-          if (attempt < 3) {
-            console.log(`⚠️ Retrying after timeout (attempt ${attempt + 1})...`);
-            await new Promise(r => setTimeout(r, 2000));
-            return callOpenAIImageGen(attempt + 1);
-          }
-          throw new Error('Request timeout after multiple attempts');
-        }
-        
-        console.error('❌ Fetch error:', fetchError);
-        throw fetchError;
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Gemini API error:', response.status, errorText);
+      return res.status(500).json({ success: false, error: `Gemini API error: ${response.status}` });
     }
 
-    const imageUrl = await callOpenAIImageGen();
+    const result = await response.json();
+    
+    // Gemini returns images differently than OpenAI
+    if (!result.generatedImages || !result.generatedImages[0]) {
+      console.error('❌ No image data in Gemini response');
+      return res.status(500).json({ success: false, error: 'No image generated' });
+    }
 
+    // Gemini returns base64 directly
+    const imageBase64 = result.generatedImages[0].bytesBase64Encoded;
+    const imageUrl = `data:image/png;base64,${imageBase64}`;
+    
+    console.log('✅ Imagen 3 image generated successfully');
     return res.status(200).json({ success: true, imageUrl });
 
   } catch (error) {
-    console.error('❌ Critical error in generate-image:', error);
-    console.error('Stack:', error.stack);
-    
-    // Return helpful error messages
-    let errorMessage = 'Unknown error occurred';
-    if (error.message.includes('timeout')) {
-      errorMessage = 'Request timeout - please try again';
-    } else if (error.message.includes('API key')) {
-      errorMessage = 'API configuration error';
-    } else if (error.message.includes('OpenAI')) {
-      errorMessage = 'Image generation service error - please try again';
-    } else {
-      errorMessage = error.message || 'Unknown error';
-    }
-    
+    console.error('❌ Critical error in generate-image-gemini:', error);
     return res.status(500).json({ 
       success: false, 
-      error: errorMessage,
-      debug: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: error.message || 'Unknown error occurred'
     });
   }
+}
+
+// Alternative: Hybrid approach using both generators
+// api/generate-image-hybrid.js
+export default async function handler(req, res) {
+  // CORS setup...
+  
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  
+  const { visualElements = '', concept = {}, preferredGenerator = 'gemini' } = req.body;
+  
+  // Try Gemini first (better for text-free), fallback to OpenAI
+  if (preferredGenerator === 'gemini' && geminiKey) {
+    try {
+      const geminiResult = await generateWithGemini(concept, visualElements, geminiKey);
+      return res.status(200).json({ success: true, imageUrl: geminiResult, generator: 'gemini' });
+    } catch (geminiError) {
+      console.warn('⚠️ Gemini failed, trying OpenAI...', geminiError.message);
+      if (openaiKey) {
+        const openaiResult = await generateWithOpenAI(concept, visualElements, openaiKey);
+        return res.status(200).json({ success: true, imageUrl: openaiResult, generator: 'openai' });
+      }
+    }
+  }
+  
+  return res.status(500).json({ success: false, error: 'No available image generators' });
+}
+
+async function generateWithGemini(concept, visualElements, apiKey) {
+  const prompt = `Portrait of character, ${concept.genre} ${concept.decade} aesthetic, ${visualElements}, concept art painting, no text`;
+  
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: prompt,
+      config: {
+        aspectRatio: "ASPECT_RATIO_1_1",
+        negativePrompt: "text, words, letters, typography, titles, signatures, logos",
+        sampleCount: 1
+      }
+    })
+  });
+
+  if (!response.ok) throw new Error(`Gemini failed: ${response.status}`);
+  
+  const result = await response.json();
+  return `data:image/png;base64,${result.generatedImages[0].bytesBase64Encoded}`;
+}
+
+async function generateWithOpenAI(concept, visualElements, apiKey) {
+  // Your existing OpenAI logic here
+  const prompt = `Character portrait, ${visualElements}, no text`;
+  
+  const response = await fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt: prompt,
+      size: "1024x1024",
+      response_format: "b64_json"
+    })
+  });
+
+  if (!response.ok) throw new Error(`OpenAI failed: ${response.status}`);
+  
+  const result = await response.json();
+  return `data:image/png;base64,${result.data[0].b64_json}`;
 }
