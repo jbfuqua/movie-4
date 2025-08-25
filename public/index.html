@@ -924,15 +924,14 @@
                 this.renderTechnicalBlock(ctx, concept, w, h, creditZones.technical, styling);
             }
 
-// Replace your renderCastBlock function with this enhanced version:
 
 			renderCastBlock(ctx, cast, w, h, zone, styling) {
 				const zoneY = h * zone.start;
 				const zoneHeight = h * zone.height;
 				
-				// INCREASED: Larger base font size (was w/45, now w/30 for ~50% increase)
-				let fontSize = Math.max(20, Math.floor(w / 30)); 
-				const maxFontSize = Math.floor(w / 25); // Cap the maximum size
+				// Larger font size but more conservative
+				let fontSize = Math.max(18, Math.floor(w / 35)); // Less aggressive than w/30
+				const maxFontSize = Math.floor(w / 28);
 				fontSize = Math.min(fontSize, maxFontSize);
 				
 				ctx.save();
@@ -946,61 +945,79 @@
 				ctx.shadowOffsetX = 1;
 				ctx.shadowOffsetY = 1;
 				
-				// Two-column layout
+				// Wider columns for larger text
 				const leftX = w * 0.25;
 				const rightX = w * 0.75;
-				const lineHeight = fontSize * 1.6; // Slightly reduced spacing for larger text
+				const lineHeight = fontSize * 1.7;
 				
-				// SAFETY CHECK: Ensure all names fit within the zone
+				// Safety check for zone bounds
 				const maxRows = Math.floor(zoneHeight / lineHeight);
-				const maxNames = maxRows * 2; // Two columns
+				const maxNames = maxRows * 2;
 				const displayCast = cast.slice(0, Math.min(maxNames, cast.length));
 				
 				displayCast.forEach((actor, index) => {
-					const cleanName = this.cleanActorName(actor).toUpperCase();
+					// Clean the actor name
+					const cleanName = String(actor).split(' AS ')[0].trim().toUpperCase();
 					const isLeft = index % 2 === 0;
 					const xPos = isLeft ? leftX : rightX;
 					const row = Math.floor(index / 2);
 					const yPos = zoneY + (row * lineHeight);
 					
-					// SAFETY CHECK: Don't render if it would go outside the zone
+					// Don't render if outside zone
 					if (yPos + fontSize > zoneY + zoneHeight) {
-						return; // Skip this name if it would overflow
+						return;
 					}
 					
-					// Ensure text fits within column width with larger font
-					const maxWidth = w * 0.22; // Slightly wider columns for larger text
+					// BETTER TEXT FITTING: More generous width and smarter truncation
+					const maxWidth = w * 0.24; // Wider columns
 					let displayName = cleanName;
-					
-					// Smart text fitting - try different approaches
 					let textWidth = ctx.measureText(displayName).width;
 					
 					if (textWidth > maxWidth) {
-						// First try: remove middle names/initials
-						const nameParts = displayName.split(' ');
-						if (nameParts.length > 2) {
-							displayName = nameParts[0] + ' ' + nameParts[nameParts.length - 1];
+						// Strategy 1: Try first name + last name only
+						const words = cleanName.split(' ');
+						if (words.length > 2) {
+							displayName = words[0] + ' ' + words[words.length - 1];
 							textWidth = ctx.measureText(displayName).width;
 						}
 						
-						// Second try: truncate if still too long
-						while (textWidth > maxWidth && displayName.length > 8) {
-							displayName = displayName.substring(0, displayName.length - 1);
-							textWidth = ctx.measureText(displayName).width;
-						}
-						
-						// Add ellipsis if we truncated
-						if (displayName.length < cleanName.length) {
-							displayName = displayName.substring(0, displayName.length - 3) + '...';
+						// Strategy 2: If still too long, try reducing font size for this name
+						if (textWidth > maxWidth) {
+							const originalFont = ctx.font;
+							let reducedSize = fontSize;
+							
+							while (textWidth > maxWidth && reducedSize > fontSize * 0.7) {
+								reducedSize -= 2;
+								ctx.font = `600 ${reducedSize}px ${styling.creditsFont}`;
+								textWidth = ctx.measureText(displayName).width;
+							}
+							
+							// If we had to reduce too much, then truncate
+							if (reducedSize <= fontSize * 0.7) {
+								ctx.font = originalFont; // Reset to original size
+								
+								// Strategy 3: Careful truncation - keep at least 8 characters
+								while (textWidth > maxWidth && displayName.length > 8) {
+									displayName = displayName.substring(0, displayName.length - 1);
+									textWidth = ctx.measureText(displayName).width;
+								}
+								
+								// Only add ellipsis if we actually truncated significantly
+								if (displayName.length < cleanName.length - 3) {
+									displayName = displayName.trim() + '...';
+								}
+							}
 						}
 					}
 					
 					ctx.fillText(displayName, xPos, yPos);
+					
+					// Reset font if we changed it
+					ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
 				});
 				
 				ctx.restore();
 			}
-
             renderBillingBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
                 const fontSize = Math.max(12, Math.floor(w / 60));
