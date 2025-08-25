@@ -51,12 +51,12 @@ export default async function handler(req, res) {
       ].join(', ');
 
       return [
-        textPreventionInstructions, // put constraints first
+//        textPreventionInstructions, // put constraints first
         `Professional ${concept.genre || 'cinematic'} movie poster artwork in the ${decade} style.`,
         declaredStyle || eraMedium,
         cleanedElements,
         nodBias,
-        'cinematic poster artwork only, professional, PG-13'
+        'cinematic concept artwork only, professional, PG-13'
       ].filter(Boolean).join(' ');
     }
 

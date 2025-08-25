@@ -565,14 +565,14 @@
                 
                 // Enhanced text prevention prompts
                 const textPreventionPrompts = [
-//                    'NO TEXT OR TITLES IN IMAGE',
-//                    'NO WRITTEN WORDS OR LETTERS VISIBLE', 
-//                    'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
-//                    'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
-//                    'no movie titles visible',
-//                    'no credits or cast names shown',
-//                    'no taglines or slogans in image',
-                    'image ready for custom overlay'
+                    'NO TEXT OR TITLES IN IMAGE',
+                    'NO WRITTEN WORDS OR LETTERS VISIBLE', 
+                    'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
+                    'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
+                    'no movie titles visible',
+                    'no credits or cast names shown',
+                    'no taglines or slogans in image',
+                    'image ready for custom text overlay'
                 ];
                 
                 // Hardcore mode modifications
@@ -595,18 +595,18 @@
                     `Era: ${concept.decade || 'modern'} authentic visual style`,
                     `Visual story: ${concept.synopsis || 'compelling narrative'}`,
                     hardcoreElements, // Add hardcore elements here
-                    'High-end movie concept artwork composition',
+                    'High-end movie artwork composition WITHOUT ANY TEXT',
                     'Portrait orientation, cinematic framing',
                     'Professional studio lighting setup',
                     'Rich color palette with strong visual contrast',
                     ...textPreventionPrompts,
-                    'Premium movie concept art visual elements only',
+                    'Premium movie key art visual elements only',
                     'PG-13 rating appropriate content',
-                    'Professional visual presentation'
+                    'Professional and tasteful visual presentation'
                 ].filter(Boolean); // Remove any empty strings
 
                 const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
-                    '. CRITICAL: This is concept art.';
+                    '. CRITICAL: This image must be completely text-free as custom movie titles and credits will be added later.';
                     
                 console.log('🚫 Enhanced text prevention prompt generated');
                 return finalPrompt;

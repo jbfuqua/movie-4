@@ -184,7 +184,7 @@ Constraints:
 - Era MUST be "${forceRandomDecade}"
 - Genre ${genreConstraint}
 - Creative seed: "${forceTheme}"
-- Avoid banned title words: Dark, Shadow, Night, Blood, Death, Steel, Cross, Stone
+- Avoid banned title words: Blood
 - Keep PG-13 implication (no graphic detail)
 - Add render_style: era-true medium ("hand-painted lithograph" | "silkscreen halftone" | "airbrushed illustration" | "painted montage" | "studio photo-composite" | "digital composite")
 
@@ -204,7 +204,7 @@ Return JSON:
     "environment":"...",
     "wardrobe_props":"...",
     "motifs":["..."],
-    "keywords":["art","no text","cinematic","professional"],
+    "keywords":["art","concept","cinematic","professional"],
     "banned":["gore","blood","weapons","graphic injury"]
   },
   "render_style": "hand-painted lithograph",
