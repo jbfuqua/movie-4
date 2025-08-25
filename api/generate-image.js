@@ -25,6 +25,19 @@ export default async function handler(req, res) {
       const decade = concept.decade || '1980s';
       const genre = concept.genre || 'cinematic';
       
+      // Varied composition styles for different eras and themes
+      const compositionStyles = [
+        'movie poster artwork', 
+        'cinematic poster composition',
+        'film poster design',
+        'movie promotional artwork',
+        'theatrical poster illustration',
+        'cinema poster art'
+      ];
+      
+      // Random composition to avoid repetitive face-focused images
+      const randomComposition = compositionStyles[Math.floor(Math.random() * compositionStyles.length)];
+      
       // Enhanced style mapping with specific artistic techniques and mediums
       const styleMap = {
         '1950s': 'hand-painted movie poster artwork, gouache and watercolor technique, visible brush strokes, paper texture, analog illustration methods, painted on canvas or paper, warm color temperature, muted palette, artistic imperfections, traditional poster painting style',
@@ -33,7 +46,7 @@ export default async function handler(req, res) {
         
         '1970s': 'airbrushed movie poster illustration, traditional airbrush technique, soft gradient transitions, painted artwork, analog illustration methods, earth tone palette, organic flowing forms, hand-painted poster art, visible paint texture',
         
-        '1980s': 'painted movie poster montage, traditional illustration with acrylic paints, dramatic painted lighting effects, hand-painted character portraits, painted backgrounds, analog poster art techniques, vibrant painted colors, artistic brush work',
+        '1980s': 'painted movie poster montage, traditional illustration with acrylic paints, dramatic painted lighting effects, hand-painted character and scene elements, painted backgrounds, analog poster art techniques, vibrant painted colors, artistic brush work',
         
         '1990s': 'early digital composite poster, Photoshop 3.0 era techniques, scanned painted elements, digital photo manipulation, hybrid analog-digital artwork, painted base with digital effects, early computer graphics integration',
         
@@ -80,20 +93,33 @@ export default async function handler(req, res) {
 
       const productionHint = productionEmphasis[decade] || productionEmphasis['1980s'];
       
+      // Composition variety prompts to avoid repetitive face-focused images
+      const compositionVariety = [
+        'Focus on atmospheric scene composition with varied visual elements',
+        'Balance characters and environmental elements in the composition',
+        'Create dynamic poster layout with multiple focal points',
+        'Emphasize mood and atmosphere over single subject focus',
+        'Design poster composition that tells a visual story',
+        'Vary the compositional approach between characters, scenes, and symbolic elements'
+      ];
+      
+      const randomCompositionHint = compositionVariety[Math.floor(Math.random() * compositionVariety.length)];
+      
       // Very explicit about no text with enhanced style instructions
       const promptParts = [
-        'Create a movie poster character portrait in authentic period style',
+        `Create a ${randomComposition} in authentic period style`,
         `${genre} film aesthetic specifically from the ${decade}`,
         `ARTISTIC MEDIUM AND TECHNIQUE: ${styleHint}`,
         genreStyleHint,
         `PRODUCTION METHOD: ${productionHint}`,
         intensityLevel,
         visualElements,
+        `COMPOSITION APPROACH: ${randomCompositionHint}`,
         'Professional concept art illustration matching the exact artistic techniques and visual aesthetics used in movie posters from this specific time period',
         'Portrait orientation layout',
         'CRITICAL REQUIREMENT: Create pure visual artwork with absolutely no text, no words, no letters, no typography, no movie titles, no credits, no signatures anywhere in the image',
         'The image should authentically capture the artistic medium, production techniques, and visual aesthetics exactly as movie posters were created during this specific decade',
-        'Focus on period-accurate artistic style, medium, and production techniques rather than just costume and props'
+        'Focus on period-accurate artistic style, medium, and production techniques with varied compositional approaches'
       ].filter(Boolean);
 
       return promptParts.join('. ');
