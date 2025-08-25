@@ -47,12 +47,12 @@ export default async function handler(req, res) {
       const textPreventionInstructions = [
         'NO TEXT, NO TITLES, NO WORDS, NO LETTERS',
         'do not include any typography or writing of any kind',
-        'poster must be image-only, text-free, clean composition'
+        'art must be image-only, text-free, clean composition'
       ].join(', ');
 
       return [
-//        textPreventionInstructions, // put constraints first
-        `Professional ${concept.genre || 'cinematic'} movie poster artwork in the ${decade} style.`,
+        textPreventionInstructions, // put constraints first
+        `Professional ${concept.genre || 'cinematic'} movie concept artwork in the ${decade} style.`,
         declaredStyle || eraMedium,
         cleanedElements,
         nodBias,
