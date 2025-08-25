@@ -924,78 +924,82 @@
                 this.renderTechnicalBlock(ctx, concept, w, h, creditZones.technical, styling);
             }
 
-            renderCastBlock(ctx, cast, w, h, zone, styling) {
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(16, Math.floor(w / 45));
-                
-                ctx.save();
-                ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
-                ctx.textAlign = 'center';
-                
-                // Professional movie poster shadow
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-                ctx.shadowBlur = 3;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
-                
-                // Two-column layout like Pulp Fiction
-                const leftX = w * 0.25;
-                const rightX = w * 0.75;
-                const lineHeight = fontSize * 1.8;
-                
-                cast.forEach((actor, index) => {
-                    const cleanName = this.cleanActorName(actor).toUpperCase();
-                    const isLeft = index % 2 === 0;
-                    const xPos = isLeft ? leftX : rightX;
-                    const row = Math.floor(index / 2);
-                    const yPos = zoneY + (row * lineHeight);
-                    
-                    // Ensure text fits within column width
-                    const maxWidth = w * 0.20;
-                    let displayName = cleanName;
-                    
-                    while (ctx.measureText(displayName).width > maxWidth && displayName.length > 10) {
-                        const words = displayName.split(' ');
-                        if (words.length > 1) {
-                            displayName = words[0] + ' ' + words[words.length - 1];
-                        } else {
-                            displayName = displayName.substring(0, displayName.length - 3) + '...';
-                        }
-                    }
-                    
-                    ctx.fillText(displayName, xPos, yPos);
-                });
-                
-                ctx.restore();
-            }
+// Replace your renderCastBlock function with this enhanced version:
 
-            renderBillingBlock(ctx, concept, w, h, zone, styling) {
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(12, Math.floor(w / 60));
-                
-                ctx.save();
-                ctx.font = `400 ${Math.floor(fontSize * 0.9)}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.textAlign = 'center';
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.shadowBlur = 2;
-                ctx.shadowOffsetX = 1;
-                ctx.shadowOffsetY = 1;
-                
-                // Professional billing block like real posters
-                const director = concept.director || this.generateDirector();
-                const lineHeight = fontSize * 1.3;
-                
-                // Line 1: A [Studio] Film
-                ctx.fillText('AN ABNORMAL STUDIOS FILM', w / 2, zoneY);
-                
-                // Line 2: Directed by
-                ctx.font = `700 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillText(`DIRECTED BY ${director.toUpperCase()}`, w / 2, zoneY + lineHeight);
-                
-                ctx.restore();
-            }
+			renderCastBlock(ctx, cast, w, h, zone, styling) {
+				const zoneY = h * zone.start;
+				const zoneHeight = h * zone.height;
+				
+				// INCREASED: Larger base font size (was w/45, now w/30 for ~50% increase)
+				let fontSize = Math.max(20, Math.floor(w / 30)); 
+				const maxFontSize = Math.floor(w / 25); // Cap the maximum size
+				fontSize = Math.min(fontSize, maxFontSize);
+				
+				ctx.save();
+				ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
+				ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+				ctx.textAlign = 'center';
+				
+				// Professional movie poster shadow
+				ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+				ctx.shadowBlur = 3;
+				ctx.shadowOffsetX = 1;
+				ctx.shadowOffsetY = 1;
+				
+				// Two-column layout
+				const leftX = w * 0.25;
+				const rightX = w * 0.75;
+				const lineHeight = fontSize * 1.6; // Slightly reduced spacing for larger text
+				
+				// SAFETY CHECK: Ensure all names fit within the zone
+				const maxRows = Math.floor(zoneHeight / lineHeight);
+				const maxNames = maxRows * 2; // Two columns
+				const displayCast = cast.slice(0, Math.min(maxNames, cast.length));
+				
+				displayCast.forEach((actor, index) => {
+					const cleanName = this.cleanActorName(actor).toUpperCase();
+					const isLeft = index % 2 === 0;
+					const xPos = isLeft ? leftX : rightX;
+					const row = Math.floor(index / 2);
+					const yPos = zoneY + (row * lineHeight);
+					
+					// SAFETY CHECK: Don't render if it would go outside the zone
+					if (yPos + fontSize > zoneY + zoneHeight) {
+						return; // Skip this name if it would overflow
+					}
+					
+					// Ensure text fits within column width with larger font
+					const maxWidth = w * 0.22; // Slightly wider columns for larger text
+					let displayName = cleanName;
+					
+					// Smart text fitting - try different approaches
+					let textWidth = ctx.measureText(displayName).width;
+					
+					if (textWidth > maxWidth) {
+						// First try: remove middle names/initials
+						const nameParts = displayName.split(' ');
+						if (nameParts.length > 2) {
+							displayName = nameParts[0] + ' ' + nameParts[nameParts.length - 1];
+							textWidth = ctx.measureText(displayName).width;
+						}
+						
+						// Second try: truncate if still too long
+						while (textWidth > maxWidth && displayName.length > 8) {
+							displayName = displayName.substring(0, displayName.length - 1);
+							textWidth = ctx.measureText(displayName).width;
+						}
+						
+						// Add ellipsis if we truncated
+						if (displayName.length < cleanName.length) {
+							displayName = displayName.substring(0, displayName.length - 3) + '...';
+						}
+					}
+					
+					ctx.fillText(displayName, xPos, yPos);
+				});
+				
+				ctx.restore();
+			}
 
             renderTechnicalBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
