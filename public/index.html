@@ -810,9 +810,12 @@
 
 // Replace your renderProfessionalTitle function with this enhanced version:
 
+// Replace your renderProfessionalTitle function with this enhanced version:
+
 			renderProfessionalTitle(ctx, concept, w, h, styling) {
 				const titleText = (concept?.title || 'UNTITLED').toUpperCase();
 				const tagline = concept?.tagline || '';
+				const decade = concept.decade || '1980s';
 				
 				// Calculate font sizes
 				let titleSize = Math.min(Math.floor(w / 8), 120);
@@ -821,48 +824,121 @@
 				const titleY = h * 0.15;
 				const maxTitleWidth = w * 0.9;
 				
-				// Title with era-specific styling
+				// Enhanced era-specific styling with effects
+				const eraEffects = {
+					'1950s': {
+						font: `${styling.titleWeight} ${titleSize}px serif, "Times New Roman", Georgia`,
+						strokeWidth: 2,
+						shadowOffsetX: 4,
+						shadowOffsetY: 4,
+						shadowBlur: 6,
+						shadowColor: 'rgba(139, 69, 19, 0.8)', // Brown shadow for vintage feel
+						effectType: 'classic'
+					},
+					'1960s': {
+						font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
+						strokeWidth: 3,
+						shadowOffsetX: 3,
+						shadowOffsetY: 3,
+						shadowBlur: 8,
+						shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
+							'rgba(0, 255, 255, 0.6)' : 'rgba(255, 20, 147, 0.7)', // Cyan for sci-fi, hot pink for others
+						effectType: 'psychedelic'
+					},
+					'1970s': {
+						font: `900 ${titleSize}px "Bebas Neue", "Impact", sans-serif`,
+						strokeWidth: 4,
+						shadowOffsetX: 6,
+						shadowOffsetY: 6,
+						shadowBlur: 12,
+						shadowColor: 'rgba(139, 69, 19, 0.8)', // Earth tones
+						effectType: 'groove'
+					},
+					'1980s': {
+						font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
+						strokeWidth: 6,
+						shadowOffsetX: 4,
+						shadowOffsetY: 4,
+						shadowBlur: 20,
+						shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
+							'rgba(0, 255, 255, 0.9)' : 'rgba(255, 0, 255, 0.9)', // Neon colors
+						effectType: 'neon'
+					},
+					'1990s': {
+						font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
+						strokeWidth: 3,
+						shadowOffsetX: 2,
+						shadowOffsetY: 2,
+						shadowBlur: 8,
+						shadowColor: 'rgba(0, 0, 0, 0.8)',
+						effectType: 'emboss'
+					},
+					'2000s': {
+						font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
+						strokeWidth: 2,
+						shadowOffsetX: 1,
+						shadowOffsetY: 1,
+						shadowBlur: 10,
+						shadowColor: 'rgba(0, 0, 0, 0.6)',
+						effectType: 'clean'
+					},
+					'2010s': {
+						font: `600 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
+						strokeWidth: 1,
+						shadowOffsetX: 0,
+						shadowOffsetY: 2,
+						shadowBlur: 8,
+						shadowColor: 'rgba(0, 0, 0, 0.5)',
+						effectType: 'minimal'
+					},
+					'2020s': {
+						font: `500 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
+						strokeWidth: 1,
+						shadowOffsetX: 0,
+						shadowOffsetY: 1,
+						shadowBlur: 4,
+						shadowColor: 'rgba(0, 0, 0, 0.3)',
+						effectType: 'modern'
+					}
+				};
+				
+				const effects = eraEffects[decade] || eraEffects['1980s'];
+				
 				ctx.save();
-				ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
+				ctx.font = effects.font;
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'middle';
 				
 				// Auto-resize if too wide
 				let titleWidth = ctx.measureText(titleText).width;
-				while (titleWidth > maxTitleWidth && titleSize > 32) {
-					titleSize -= 4;
-					ctx.font = `${styling.titleWeight} ${titleSize}px ${styling.titleFont}`;
+				let currentSize = titleSize;
+				while (titleWidth > maxTitleWidth && currentSize > 32) {
+					currentSize -= 4;
+					effects.font = effects.font.replace(/\d+px/, `${currentSize}px`);
+					ctx.font = effects.font;
 					titleWidth = ctx.measureText(titleText).width;
 				}
 				
-				// Title shadow
-				ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-				ctx.fillText(titleText, w / 2 + 3, titleY + 3);
-				
-				// Title with glow
-				ctx.shadowColor = styling.titleGlow;
-				ctx.shadowBlur = styling.glowIntensity;
-				ctx.fillStyle = styling.titleColor;
-				ctx.fillText(titleText, w / 2, titleY);
+				// Apply era-specific effects
+				this.applyTitleEffects(ctx, titleText, w / 2, titleY, effects, styling, decade);
 				
 				ctx.restore();
 				
-				// ENHANCED: Dynamic tagline wrapping
+				// Tagline rendering (unchanged)
 				if (tagline) {
 					ctx.save();
 					ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
 					ctx.textAlign = 'center';
 					ctx.textBaseline = 'middle';
 					
-					const taglineY = titleY + titleSize * 0.8;
-					const maxTaglineWidth = w * 0.85; // Slightly narrower than title
+					const taglineY = titleY + currentSize * 0.8;
+					const maxTaglineWidth = w * 0.85;
 					const lineHeight = taglineSize * 1.2;
 					
-					// Check if tagline needs wrapping
 					const taglineWidth = ctx.measureText(tagline).width;
 					
 					if (taglineWidth <= maxTaglineWidth) {
-						// Single line tagline
+						// Single line
 						ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
 						ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
 						
@@ -871,7 +947,7 @@
 						ctx.shadowBlur = 4;
 						ctx.fillText(tagline, w / 2, taglineY);
 					} else {
-						// Multi-line tagline wrapping
+						// Multi-line wrapping logic (same as before)
 						const words = tagline.split(' ');
 						const lines = [];
 						let currentLine = '';
@@ -888,29 +964,19 @@
 							}
 						}
 						
-						if (currentLine) {
-							lines.push(currentLine);
-						}
-						
-						// Limit to 2 lines max
+						if (currentLine) lines.push(currentLine);
 						if (lines.length > 2) {
 							lines[1] = lines[1] + '...';
 							lines.length = 2;
 						}
 						
-						// Calculate starting Y position for centered multi-line text
 						const totalHeight = lines.length * lineHeight;
 						const startY = taglineY - (totalHeight / 2) + (lineHeight / 2);
 						
-						// Render each line
 						lines.forEach((line, index) => {
 							const lineY = startY + (index * lineHeight);
-							
-							// Shadow
 							ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
 							ctx.fillText(line, w / 2 + 2, lineY + 2);
-							
-							// Main text
 							ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
 							ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
 							ctx.shadowBlur = 4;
@@ -919,6 +985,87 @@
 					}
 					
 					ctx.restore();
+				}
+			}
+
+			// NEW: Helper function for applying era-specific title effects
+			applyTitleEffects(ctx, text, x, y, effects, styling, decade) {
+				switch (effects.effectType) {
+					case 'neon': // 1980s neon effect
+						// Outer glow
+						ctx.shadowColor = effects.shadowColor;
+						ctx.shadowBlur = effects.shadowBlur;
+						ctx.strokeStyle = effects.shadowColor.replace('0.9', '1.0');
+						ctx.lineWidth = effects.strokeWidth + 2;
+						ctx.strokeText(text, x, y);
+						
+						// Inner stroke
+						ctx.shadowBlur = effects.shadowBlur / 2;
+						ctx.strokeStyle = styling.titleColor;
+						ctx.lineWidth = effects.strokeWidth;
+						ctx.strokeText(text, x, y);
+						
+						// Fill
+						ctx.shadowBlur = 0;
+						ctx.fillStyle = styling.titleColor;
+						ctx.fillText(text, x, y);
+						break;
+						
+					case 'groove': // 1970s groove/embossed effect
+						// Deep shadow
+						ctx.fillStyle = effects.shadowColor;
+						ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
+						
+						// Highlight
+						ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+						ctx.fillText(text, x - 2, y - 2);
+						
+						// Main text
+						ctx.fillStyle = styling.titleColor;
+						ctx.fillText(text, x, y);
+						break;
+						
+					case 'psychedelic': // 1960s psychedelic effect
+						// Multiple colored shadows for trippy effect
+						const colors = ['rgba(255, 0, 255, 0.5)', 'rgba(0, 255, 255, 0.5)', 'rgba(255, 255, 0, 0.5)'];
+						colors.forEach((color, i) => {
+							ctx.fillStyle = color;
+							ctx.fillText(text, x + (i + 1) * 2, y + (i + 1) * 2);
+						});
+						
+						// Main text with stroke
+						ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+						ctx.lineWidth = 2;
+						ctx.strokeText(text, x, y);
+						ctx.fillStyle = styling.titleColor;
+						ctx.fillText(text, x, y);
+						break;
+						
+					case 'emboss': // 1990s embossed effect
+						// Dark shadow
+						ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+						ctx.fillText(text, x + 3, y + 3);
+						
+						// Light highlight
+						ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+						ctx.fillText(text, x - 1, y - 1);
+						
+						// Main text
+						ctx.fillStyle = styling.titleColor;
+						ctx.fillText(text, x, y);
+						break;
+						
+					default: // Classic/clean/minimal/modern
+						// Standard shadow
+						ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+						ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
+						
+						// Main text with glow
+						ctx.shadowColor = styling.titleGlow;
+						ctx.shadowBlur = styling.glowIntensity;
+						ctx.fillStyle = styling.titleColor;
+						ctx.fillText(text, x, y);
+						break;
 				}
 			}
 
