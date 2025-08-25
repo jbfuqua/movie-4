@@ -1,6 +1,6 @@
 // api/generate-image.js - Using Gemini's Built-in Image Generation
 export default async function handler(req, res) {
-  console.log('💎 === GEMINI BUILT-IN IMAGE GENERATION START ===');
+  console.log('💎 === IMAGEN 3 IMAGE GENERATION START ===');
   
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -25,7 +25,6 @@ export default async function handler(req, res) {
       const decade = concept.decade || '1980s';
       const genre = concept.genre || 'cinematic';
       
-      // NEW: Highly detailed style map for more authentic results
       const decadeStyleMap = {
         '1950s': 'hand-painted lithograph print style, rich saturated Technicolor palette, dramatic pulp illustration, subtle film grain, inspired by Saul Bass',
         '1960s': 'psychedelic art influence, bold and minimalist design, high-contrast graphics, pop-art aesthetic, vintage film poster feel', 
@@ -37,7 +36,6 @@ export default async function handler(req, res) {
         '2020s': 'hyper-realistic digital painting, atmospheric and textured lighting, modern cinematic quality with impeccable detail, visually striking composition'
       };
 
-      // NEW: Art style modifier based on dropdown selection
       const artStyleMap = {
         'b-movie': 'exaggerated B-movie poster style, pulpy, lurid colors, intentionally dramatic and over-the-top',
         'photo': 'hyper-realistic modern photographic style, shot on a high-end camera, sharp focus, cinematic lighting',
@@ -52,12 +50,11 @@ export default async function handler(req, res) {
         'intense dramatic atmosphere, dark cinematic mood, edgy visual style' : 
         'professional cinematic atmosphere';
       
-      // Very explicit about no text
       const promptParts = [
         'Generate a movie poster character portrait artwork',
         `${genre} film aesthetic from the ${decade}`,
         styleHint,
-        artStyleHint, // Add the specific art style instruction
+        artStyleHint,
         intensityLevel,
         visualElements,
         'Professional concept art illustration style',
@@ -71,36 +68,27 @@ export default async function handler(req, res) {
     }
 
     const prompt = createGeminiImagePrompt(concept, visualElements, artStyle);
-    console.log('🎯 Gemini image prompt (length: ' + prompt.length + ')');
-
-    // Use Gemini's generateContent with image generation request
-    console.log('💎 Making Gemini generateContent call for image generation...');
+    console.log('🎯 Imagen 3 prompt (length: ' + prompt.length + ')');
+    
+    console.log('🖼️ Making Imagen 3 API call...');
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     let response;
     try {
-      // Use Gemini 1.5 Flash (updated model)
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
+      // CORRECTED: Use the dedicated Imagen 3 endpoint and payload structure
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage?key=${geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          // Using tools for more reliable image generation
-          "tools": [{
-            "image_generation": {
-                "sample_count": 1
-            }
-          }],
-          generationConfig: {
-            temperature: 0.8
+          prompt: prompt,
+          config: {
+            // Match the canvas aspect ratio (1024x1280)
+            aspectRatio: "ASPECT_RATIO_4_5",
+            sampleCount: 1
           }
         }),
         signal: controller.signal
@@ -115,53 +103,43 @@ export default async function handler(req, res) {
     }
 
     clearTimeout(timeoutId);
-    console.log('📡 Gemini response status:', response.status);
+    console.log('📡 Imagen response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Gemini API error:', response.status, errorText);
+      console.error('❌ Imagen API error:', response.status, errorText);
       return res.status(response.status).json({ 
         success: false, 
         error: `Gemini API error: ${response.status}`,
-        details: errorText.substring(0, 300)
+        details: errorText.substring(0, 500) // Increased detail length
       });
     }
 
     const result = await response.json();
-    console.log('✅ Gemini response parsed successfully');
+    console.log('✅ Imagen response parsed successfully');
     
-    // Look for image content in the response (updated for tool-based generation)
-    let imageBase64;
-    
-    if (result.candidates?.[0]?.content?.parts) {
-      for (const part of result.candidates[0].content.parts) {
-        if (part.inlineData?.data) { // Standard inline data
-          imageBase64 = part.inlineData.data;
-          console.log('📦 Found image in inlineData format');
-          break;
-        }
-      }
-    }
+    // CORRECTED: Parse the response from the Imagen endpoint
+    const imageBase64 = result?.generatedImages?.[0]?.bytesBase64Encoded;
 
     if (!imageBase64) {
-      console.error('❌ No image data found in Gemini response');
+      console.error('❌ No image data found in Imagen response');
       console.log('Response structure:', JSON.stringify(result, null, 2));
       return res.status(500).json({ 
         success: false, 
-        error: 'Gemini returned no image data'
+        error: 'Imagen model returned no image data'
       });
     }
 
     const imageUrl = `data:image/png;base64,${imageBase64}`;
     
-    console.log('✅ Image generated successfully with Gemini built-in generation');
+    console.log('✅ Image generated successfully with Imagen 3');
     console.log('📏 Image data length:', imageBase64.length);
-    console.log('💎 === GEMINI IMAGE GENERATION SUCCESS ===');
+    console.log('💎 === IMAGEN 3 IMAGE GENERATION SUCCESS ===');
 
     return res.status(200).json({ 
       success: true, 
       imageUrl,
-      generator: 'gemini-1.5-flash'
+      generator: 'imagen-3.0'
     });
 
   } catch (error) {
