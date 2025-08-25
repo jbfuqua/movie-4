@@ -110,49 +110,40 @@ export default async function handler(req, res) {
       // NEW: Different text handling based on allowText parameter
       let textInstructions = [];
       if (allowText) {
-        // AI Generated Text Mode - Encourage natural movie poster text for 4:5 ratio
+        // AI Generated Text Mode - Encourage natural movie poster text
         textInstructions = [
           `MOVIE TITLE TO INCLUDE: "${concept.title}"`,
           `TAGLINE TO INCLUDE: "${concept.tagline || ''}"`,
-          'Design for 4:5 aspect ratio - title at top third, credits at bottom',
-          'Include movie title prominently in the upper portion (top 25% of image)',
-          concept.tagline ? 'Include the tagline in smaller text below the title' : '',
-          'Use authentic movie poster text layout adapted for 4:5 Instagram format',
+          'Include movie title prominently at the top of the poster in era-appropriate typography',
+          concept.tagline ? 'Include the tagline in smaller text below or above the title' : '',
+          'Use authentic movie poster text layout and typography for the era',
           'Make text a natural integrated part of the poster design',
-          'Text should follow professional movie poster conventions but fit 4:5 layout',
+          'Text should follow professional movie poster conventions',
           `Typography should match ${decade} movie poster design standards`,
-          'Include simplified billing credits in bottom 15% of image',
-          'All text elements must be completely visible within the 4:5 frame',
-          'Professional movie poster text hierarchy optimized for Instagram format',
-          'Ensure title and credits have sufficient contrast against background',
-          'Position all text to avoid cropping in 4:5 ratio'
+          'Include billing block credits area at bottom (can be placeholder text)',
+          'Professional movie poster text hierarchy and placement'
         ];
         
-        console.log('🤖 AI Generated Text Mode: Optimized for 4:5 Instagram ratio');
+        console.log('🤖 AI Generated Text Mode: Encouraging natural title integration');
       } else {
-        // Professional Overlay Mode - Prevent all text, optimized for 4:5 canvas overlay
+        // Professional Overlay Mode - Prevent all text
         textInstructions = [
           'CRITICAL REQUIREMENT: Create pure visual artwork with absolutely no text, no words, no letters, no typography, no movie titles, no credits, no signatures anywhere in the image',
-          'Image designed for 4:5 aspect ratio custom text overlay',
+          'Image ready for custom text overlay',
           'No text elements of any kind',
           'Pure visual composition without any written content',
-          'Artwork should be designed to accommodate text overlay in 4:5 format',
-          'Leave clear space in upper 25% for title overlay',
-          'Leave clear space in bottom 15% for credits overlay',
+          'Artwork should be designed to accommodate text overlay later',
           'Focus entirely on visual elements, characters, and atmosphere',
-          'Composition optimized for Instagram 4:5 poster format'
+          'Leave clear areas where text could be added later if needed'
         ];
         
-        console.log('🎨 Professional Overlay Mode: 4:5 ratio ready for canvas overlay');
+        console.log('🎨 Professional Overlay Mode: Preventing all text for canvas overlay');
       }
 
-      // Build the complete prompt with proper aspect ratio instructions
+      // Build the complete prompt
       const promptParts = [
         `Create a ${randomComposition} in authentic period style`,
         `${genre} film aesthetic specifically from the ${decade}`,
-        'CRITICAL: 4:5 aspect ratio (portrait orientation, slightly taller than standard movie poster)',
-        'Instagram-optimized dimensions - design for 1024x1280 pixel canvas',
-        'Compose all elements to fit within the 4:5 frame without cropping',
         `ARTISTIC MEDIUM AND TECHNIQUE: ${styleHint}`,
         genreStyleHint,
         `PRODUCTION METHOD: ${productionHint}`,
@@ -161,11 +152,9 @@ export default async function handler(req, res) {
         `COMPOSITION APPROACH: ${randomCompositionHint}`,
         ...textInstructions.filter(Boolean), // Remove empty strings
         'Professional concept art illustration matching the exact artistic techniques and visual aesthetics used in movie posters from this specific time period',
-        'IMPORTANT: All text, titles, and credits must fit completely within the 4:5 frame',
-        'Design layout specifically for Instagram poster format (4:5 ratio)',
-        'Leave appropriate margins so nothing important gets cut off',
+        'Portrait orientation layout',
         'The image should authentically capture the artistic medium, production techniques, and visual aesthetics exactly as movie posters were created during this specific decade',
-        'Focus on period-accurate artistic style, medium, and production techniques optimized for 4:5 aspect ratio'
+        'Focus on period-accurate artistic style, medium, and production techniques with varied compositional approaches'
       ].filter(Boolean);
 
       return promptParts.join('. ');
@@ -181,52 +170,25 @@ export default async function handler(req, res) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-    // Try Imagen 3 endpoint first for better aspect ratio control
-    const useImagen = true; // Toggle this to test different endpoints
-
     let response;
     try {
-      
-      if (useImagen) {
-        console.log('🎨 Using Imagen 3 endpoint for precise 4:5 ratio control...');
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage?key=${geminiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            config: {
-              aspectRatio: "ASPECT_RATIO_4_5", // Precise 4:5 ratio
-              negativePrompt: allowText ? 
-                "blurry, low quality, distorted text, illegible text, cut-off text, cropped titles, cropped credits, text outside frame" : 
-                "text, words, letters, typography, titles, credits, signatures, logos, watermarks, writing",
-              sampleCount: 1
-            }
-          }),
-          signal: controller.signal
-        });
-      } else {
-        console.log('🤖 Using Gemini 2.0 Flash with content generation...');
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: prompt
-              }]
-            }],
-            generationConfig: {
-              responseModalities: ["TEXT", "IMAGE"],
-              temperature: allowText ? 0.8 : 0.7,
-            }
-          }),
-          signal: controller.signal
-        });
-      }
+      // Use Gemini 2.0 Flash with image generation capability
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+            temperature: allowText ? 0.8 : 0.7, // Slightly higher temperature for text generation
+          }
+        }),
         signal: controller.signal
       });
     } catch (fetchError) {
@@ -254,25 +216,15 @@ export default async function handler(req, res) {
     const result = await response.json();
     console.log('✅ Gemini response parsed successfully');
     
-    // Look for image content in the response - handle both Imagen and Gemini 2.0 formats
+    // Look for image content in the response
     let imageBase64;
-    let imageWidth, imageHeight;
     
-    if (useImagen) {
-      // Imagen 3 response format
-      if (result.generatedImages && result.generatedImages[0] && result.generatedImages[0].bytesBase64Encoded) {
-        imageBase64 = result.generatedImages[0].bytesBase64Encoded;
-        console.log('📦 Found image in Imagen 3 format');
-      }
-    } else {
-      // Gemini 2.0 response format
-      if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts) {
-        for (const part of result.candidates[0].content.parts) {
-          if (part.inlineData && part.inlineData.data) {
-            imageBase64 = part.inlineData.data;
-            console.log('📦 Found image in Gemini 2.0 inlineData format');
-            break;
-          }
+    if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts) {
+      for (const part of result.candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          imageBase64 = part.inlineData.data;
+          console.log('📦 Found image in inlineData format');
+          break;
         }
       }
     }
@@ -307,24 +259,9 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Critical error in generate-image:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
-    
-    // Log the request details for debugging
-    console.log('🔍 Debug info:');
-    console.log('- allowText:', allowText);
-    console.log('- concept title:', concept?.title);
-    console.log('- visualElements length:', visualElements?.length);
-    
     return res.status(500).json({ 
       success: false, 
-      error: error.message || 'Internal server error',
-      debug: {
-        allowText,
-        hasGeminiKey: !!geminiKey,
-        conceptTitle: concept?.title,
-        visualElementsLength: visualElements?.length
-      }
+      error: error.message || 'Internal server error'
     });
   }
 }

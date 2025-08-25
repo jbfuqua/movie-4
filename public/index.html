@@ -815,30 +815,19 @@
                             ctx.fillStyle = '#000000';
                             ctx.fillRect(0, 0, canvas.width, canvas.height);
                             
-                            // NEW: Since we're generating in 4:5 ratio, we should get a perfect fit
-                            // Check if image is already the right aspect ratio (4:5 = 0.8)
-                            const imageRatio = img.width / img.height;
-                            const canvasRatio = canvas.width / canvas.height;
-                            const expectedRatio = 4/5; // 0.8
+                            // Calculate scaling to fit image in canvas while maintaining aspect ratio
+                            const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                            const scaledWidth = img.width * scale;
+                            const scaledHeight = img.height * scale;
                             
-                            console.log('🔍 Image ratio:', imageRatio, 'Canvas ratio:', canvasRatio, 'Expected:', expectedRatio);
+                            // Center the image
+                            const x = (canvas.width - scaledWidth) / 2;
+                            const y = (canvas.height - scaledHeight) / 2;
                             
-                            if (Math.abs(imageRatio - expectedRatio) < 0.05) {
-                                // Perfect 4:5 ratio - fit exactly to canvas
-                                console.log('✅ Perfect 4:5 ratio detected, fitting exactly');
-                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            } else {
-                                // Fallback: maintain aspect ratio and center
-                                const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-                                const scaledWidth = img.width * scale;
-                                const scaledHeight = img.height * scale;
-                                
-                                const x = (canvas.width - scaledWidth) / 2;
-                                const y = (canvas.height - scaledHeight) / 2;
-                                
-                                console.log('🔍 Fallback scaling:', scaledWidth, 'x', scaledHeight, 'at', x, ',', y);
-                                ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-                            }
+                            console.log('🔍 Scaled image:', scaledWidth, 'x', scaledHeight, 'at', x, ',', y);
+                            
+                            // Draw image to canvas
+                            ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
                             
                             console.log('✅ Image loaded to canvas successfully');
                             resolve();
