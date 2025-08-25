@@ -1,4 +1,4 @@
-// api/generate-image.js - Corrected Gemini Imagen API Implementation
+// api/generate-image.js - Fixed Gemini Imagen API Implementation
 export default async function handler(req, res) {
   console.log('💎 === GEMINI IMAGEN GENERATION START ===');
   
@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       nodTheme: concept.nod_theme
     });
 
-    // Create Imagen-optimized prompt (based on official docs)
+    // Create Imagen-optimized prompt
     function createImagenPrompt(concept, visualElements) {
       const decade = concept.decade || '1980s';
       const genre = concept.genre || 'cinematic';
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
         visualElements,
         'Professional concept art illustration',
         'Portrait orientation',
-        'No text, no words, no letters anywhere in the image'
+        'No text, no words, no letters, no typography anywhere in the image'
       ].filter(Boolean);
 
       return promptParts.join(', ');
@@ -78,43 +78,41 @@ export default async function handler(req, res) {
     console.log('🎯 Imagen prompt (length: ' + prompt.length + ')');
     console.log('🎯 Prompt preview:', prompt.substring(0, 150) + '...');
 
-    // Call Gemini Imagen API using the CORRECT endpoint from docs
-    console.log('💎 Making Gemini Imagen API call...');
+    // CORRECTED: Using the right endpoint and payload structure from OpenAI's recommendation
+    console.log('💎 Making Gemini Imagen API call with correct format...');
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log('⏰ Request timeout triggered');
       controller.abort();
-    }, 60000); // 60 second timeout (Imagen can be slow)
+    }, 60000); // 60 second timeout
 
     let response;
     try {
-      // CORRECTED: Using the right model name from the official docs
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:generateImage?key=${geminiKey}`, {
+      // FIXED: Use correct model and endpoint format
+      const model = 'imagen-3.0-generate-002'; // Updated model name
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${geminiKey}`;
+      
+      // FIXED: Use correct payload structure
+      const body = {
+        instances: [{ prompt }],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: "1:1",
+          // Add negative prompt in parameters
+          negativePrompt: "text, words, letters, typography, titles, credits, signatures, logos, watermarks, captions, movie titles, names, writing, script, alphabet"
+        }
+      };
+
+      console.log('📤 Making request to:', url);
+      console.log('📤 Request body:', JSON.stringify(body, null, 2));
+
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: prompt,
-          config: {
-            aspectRatio: "ASPECT_RATIO_1_1", // Square format
-            negativePrompt: "text, words, letters, typography, titles, credits, signatures, logos, watermarks, captions, movie titles, names, writing, script, alphabet",
-            sampleCount: 1,
-            seed: Math.floor(Math.random() * 1000000), // Random seed for variety
-            // Add safety settings to prevent content blocking
-            safetySettings: [
-              {
-                category: "HARM_CATEGORY_HATE_SPEECH",
-                threshold: "BLOCK_ONLY_HIGH"
-              },
-              {
-                category: "HARM_CATEGORY_DANGEROUS_CONTENT", 
-                threshold: "BLOCK_ONLY_HIGH"
-              }
-            ]
-          }
-        }),
+        body: JSON.stringify(body),
         signal: controller.signal
       });
     } catch (fetchError) {
@@ -149,18 +147,20 @@ export default async function handler(req, res) {
       
       console.error('❌ Gemini API error:', response.status, response.statusText);
       
-      // Provide specific error guidance based on official docs
+      // Provide specific error guidance
       let errorGuidance = '';
       if (response.status === 400) {
         if (errorText.includes('MODEL_NOT_FOUND') || errorText.includes('imagen')) {
-          errorGuidance = 'Imagen API may not be enabled for your project. Enable Vertex AI API in Google Cloud Console.';
+          errorGuidance = 'Model not found. Try enabling Vertex AI API in Google Cloud Console.';
         } else if (errorText.includes('quota') || errorText.includes('exceeded')) {
           errorGuidance = 'API quota exceeded. Check your Google Cloud billing and quotas.';
         } else {
           errorGuidance = 'Invalid request format or blocked content.';
         }
       } else if (response.status === 401 || response.status === 403) {
-        errorGuidance = 'Authentication failed. Check your API key and make sure Imagen API is enabled.';
+        errorGuidance = 'Authentication failed. Check your API key and enable required APIs.';
+      } else if (response.status === 404) {
+        errorGuidance = 'Model endpoint not found. Make sure Vertex AI API is enabled and the model is available in your region.';
       } else if (response.status === 429) {
         errorGuidance = 'Rate limited. Try again in a moment.';
       }
@@ -180,10 +180,10 @@ export default async function handler(req, res) {
       result = await response.json();
       console.log('✅ Gemini response parsed successfully');
       console.log('📦 Response structure:', {
+        hasPredictions: 'predictions' in result,
         hasGeneratedImages: 'generatedImages' in result,
-        imageCount: result.generatedImages ? result.generatedImages.length : 0,
-        firstImageKeys: result.generatedImages && result.generatedImages[0] ? Object.keys(result.generatedImages[0]) : [],
-        hasError: 'error' in result
+        hasError: 'error' in result,
+        keys: Object.keys(result)
       });
     } catch (jsonError) {
       console.error('❌ Failed to parse Gemini response as JSON:', jsonError);
@@ -203,20 +203,42 @@ export default async function handler(req, res) {
       });
     }
 
-    if (!result?.generatedImages?.[0]?.bytesBase64Encoded) {
-      console.error('❌ No image data in Gemini response');
+    // FIXED: Parse both possible response shapes as recommended by OpenAI
+    let imageBase64;
+    
+    if (Array.isArray(result.predictions) && result.predictions[0]?.bytesBase64Encoded) {
+      // REST API shape: predictions[].bytesBase64Encoded
+      imageBase64 = result.predictions[0].bytesBase64Encoded;
+      console.log('📦 Found image in predictions format');
+    } else if (Array.isArray(result.generatedImages) && result.generatedImages[0]?.image?.imageBytes) {
+      // SDK shape: generatedImages[].image.imageBytes
+      imageBase64 = result.generatedImages[0].image.imageBytes;
+      console.log('📦 Found image in generatedImages format');
+    } else if (Array.isArray(result.generatedImages) && result.generatedImages[0]?.bytesBase64Encoded) {
+      // Alternative shape: generatedImages[].bytesBase64Encoded
+      imageBase64 = result.generatedImages[0].bytesBase64Encoded;
+      console.log('📦 Found image in alternative generatedImages format');
+    } else {
+      console.error('❌ Unexpected Imagen response shape');
       console.log('Full response:', JSON.stringify(result, null, 2));
       return res.status(500).json({ 
         success: false, 
-        error: 'Gemini returned no image data',
-        details: 'bytesBase64Encoded field missing from response'
+        error: 'Unexpected Imagen response shape',
+        details: 'Image data not found in expected locations'
       });
     }
 
-    const imageBase64 = result.generatedImages[0].bytesBase64Encoded;
+    if (!imageBase64) {
+      console.error('❌ No image data found');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Gemini returned no image data'
+      });
+    }
+
     const imageUrl = `data:image/png;base64,${imageBase64}`;
     
-    console.log('✅ Image generated successfully with Gemini Imagen 3');
+    console.log('✅ Image generated successfully with Gemini Imagen');
     console.log('📏 Image data length:', imageBase64.length);
     console.log('💎 === GEMINI IMAGEN GENERATION SUCCESS ===');
 
@@ -231,7 +253,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ 
       success: false, 
       error: error.message || 'Internal server error',
-      stack: error.stack?.split('\n')[0] // First line of stack trace for debugging
+      stack: error.stack?.split('\n')[0]
     });
   }
 }
