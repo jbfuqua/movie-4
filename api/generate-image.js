@@ -83,12 +83,13 @@ export default async function handler(req, res) {
       const promptParts = [
         textPreventionInstructions,
         `Professional character portrait study for ${concept.genre || 'cinematic'} film in ${decade} style.`,
-        'Film development concept art, visual reference for production design.',
+        'Film development **concept art, character/environment reference only (no titles or credits).**',
         'Character-focused artwork study, not marketing material.',
         declaredStyle || eraMedium,
         cleanedElements,
         nodBias,
-        'Character study illustration, film production art, PG-13'
+        'Character study illustration, film production art, PG-13',
+		'Absolutely no text, titles, names, signatures, letters, logos, or credits inside the image.'
       ].filter(Boolean);
 
       return promptParts.join(' ');

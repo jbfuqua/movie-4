@@ -205,7 +205,11 @@ Return JSON:
     "wardrobe_props":"...",
     "motifs":["..."],
     "keywords":["art","concept","cinematic","professional"],
-    "banned":["gore","blood","weapons","graphic injury"]
+      banned: [
+        "text","letters","typography","caption","credits","titles","logo","watermark","signature","words",
+        "gore","blood","graphic injury"
+      ]
+
   },
   "render_style": "hand-painted lithograph",
   "nod_theme": ${JSON.stringify(safeNodTheme)},
