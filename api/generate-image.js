@@ -307,9 +307,24 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Critical error in generate-image:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // Log the request details for debugging
+    console.log('🔍 Debug info:');
+    console.log('- allowText:', allowText);
+    console.log('- concept title:', concept?.title);
+    console.log('- visualElements length:', visualElements?.length);
+    
     return res.status(500).json({ 
       success: false, 
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      debug: {
+        allowText,
+        hasGeminiKey: !!geminiKey,
+        conceptTitle: concept?.title,
+        visualElementsLength: visualElements?.length
+      }
     });
   }
 }
