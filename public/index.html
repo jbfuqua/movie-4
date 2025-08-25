@@ -565,13 +565,6 @@
                 
                 // Enhanced text prevention prompts
                 const textPreventionPrompts = [
-//                    'NO TEXT OR TITLES IN IMAGE',
-//                    'NO WRITTEN WORDS OR LETTERS VISIBLE', 
-//                    'CLEAN IMAGE WITHOUT ANY TEXT OVERLAYS',
-//                    'TEXT-FREE COMPOSITION FOR OVERLAY PURPOSES',
-//                    'no movie titles visible',
-//                    'no credits or cast names shown',
-//                    'no taglines or slogans in image',
                     'image ready for custom overlay'
                 ];
                 
@@ -850,172 +843,139 @@
 
             renderProfessionalCredits(ctx, concept, w, h, styling) {
                 const creditZones = {
-                    cast: { start: 0.72, height: 0.12 },
-                    director: { start: 0.85, height: 0.04 },
-                    studio: { start: 0.90, height: 0.03 },
-                    metadata: { start: 0.94, height: 0.05 }
+                    cast: { start: 0.68, height: 0.15 },
+                    billing: { start: 0.84, height: 0.06 },
+                    technical: { start: 0.91, height: 0.08 }
                 };
                 
                 const cast = this.generateProfessionalCast(concept);
                 
-                this.renderCastSection(ctx, cast, w, h, creditZones.cast, styling);
-                this.renderDirectorSection(ctx, concept, w, h, creditZones.director, styling);
-                this.renderStudioSection(ctx, concept, w, h, creditZones.studio, styling);
-                this.renderMetadataSection(ctx, concept, w, h, creditZones.metadata, styling);
+                this.renderCastBlock(ctx, cast, w, h, creditZones.cast, styling);
+                this.renderBillingBlock(ctx, concept, w, h, creditZones.billing, styling);
+                this.renderTechnicalBlock(ctx, concept, w, h, creditZones.technical, styling);
             }
 
-            renderCastSection(ctx, cast, w, h, zone, styling) {
+            renderCastBlock(ctx, cast, w, h, zone, styling) {
                 const zoneY = h * zone.start;
-                const fontSize = Math.max(14, Math.floor(w / 50));
+                const fontSize = Math.max(16, Math.floor(w / 45));
                 
                 ctx.save();
                 ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
                 ctx.textAlign = 'center';
                 
-                // Enhanced shadow for better depth
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-                ctx.shadowBlur = 4;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
-                
-                // Improved checkerboard layout with better spacing
-                if (cast.length <= 2) {
-                    const lineHeight = fontSize * 1.5;
-                    cast.forEach((actor, index) => {
-                        const cleanName = this.cleanActorName(actor);
-                        const yPos = zoneY + (index * lineHeight);
-                        ctx.fillText(cleanName, w / 2, yPos);
-                    });
-                } else {
-                    const lineHeight = fontSize * 1.6; // Increased spacing
-                    const leftX = w * 0.27; // Moved slightly inward
-                    const rightX = w * 0.73; // Moved slightly inward
-                    
-                    cast.forEach((actor, index) => {
-                        const cleanName = this.cleanActorName(actor);
-                        const isLeft = index % 2 === 0;
-                        const xPos = isLeft ? leftX : rightX;
-                        const row = Math.floor(index / 2);
-                        const yPos = zoneY + (row * lineHeight);
-                        
-                        // Better text fitting with ellipsis
-                        const maxWidth = w * 0.22;
-                        let displayName = cleanName;
-                        ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-                        
-                        while (ctx.measureText(displayName).width > maxWidth && displayName.length > 8) {
-                            displayName = displayName.substring(0, displayName.length - 4) + '...';
-                        }
-                        
-                        // Add subtle glow effect for cast names
-                        ctx.shadowBlur = 6;
-                        ctx.fillText(displayName, xPos, yPos);
-                    });
-                }
-                
-                ctx.restore();
-            }
-
-            renderDirectorSection(ctx, concept, w, h, zone, styling) {
-                const director = concept.director || this.generateDirector();
-                const zoneY = h * zone.start;
-                const fontSize = Math.max(13, Math.floor(w / 55));
-                
-                ctx.save();
-                ctx.font = `700 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-                ctx.textAlign = 'center';
-                
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                // Professional movie poster shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
                 ctx.shadowBlur = 3;
                 ctx.shadowOffsetX = 1;
                 ctx.shadowOffsetY = 1;
                 
-                ctx.font = `400 ${Math.floor(fontSize * 0.8)}px ${styling.creditsFont}`;
-                ctx.fillText('DIRECTED BY', w / 2, zoneY - fontSize * 0.3);
+                // Two-column layout like Pulp Fiction
+                const leftX = w * 0.25;
+                const rightX = w * 0.75;
+                const lineHeight = fontSize * 1.8;
                 
-                ctx.font = `700 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillText(director.toUpperCase(), w / 2, zoneY);
+                cast.forEach((actor, index) => {
+                    const cleanName = this.cleanActorName(actor).toUpperCase();
+                    const isLeft = index % 2 === 0;
+                    const xPos = isLeft ? leftX : rightX;
+                    const row = Math.floor(index / 2);
+                    const yPos = zoneY + (row * lineHeight);
+                    
+                    // Ensure text fits within column width
+                    const maxWidth = w * 0.20;
+                    let displayName = cleanName;
+                    
+                    while (ctx.measureText(displayName).width > maxWidth && displayName.length > 10) {
+                        const words = displayName.split(' ');
+                        if (words.length > 1) {
+                            displayName = words[0] + ' ' + words[words.length - 1];
+                        } else {
+                            displayName = displayName.substring(0, displayName.length - 3) + '...';
+                        }
+                    }
+                    
+                    ctx.fillText(displayName, xPos, yPos);
+                });
                 
                 ctx.restore();
             }
 
-            renderStudioSection(ctx, concept, w, h, zone, styling) {
+            renderBillingBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
                 const fontSize = Math.max(12, Math.floor(w / 60));
                 
                 ctx.save();
-                ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
+                ctx.font = `400 ${Math.floor(fontSize * 0.9)}px ${styling.creditsFont}`;
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
                 ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
                 
-                // Enhanced shadow for better readability
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
-                ctx.shadowBlur = 6;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
+                // Professional billing block like real posters
+                const director = concept.director || this.generateDirector();
+                const lineHeight = fontSize * 1.3;
                 
-                const studioText = 'AN ABNORMAL STUDIOS FILM';
-                ctx.fillText(studioText, w / 2, zoneY);
+                // Line 1: A [Studio] Film
+                ctx.fillText('AN ABNORMAL STUDIOS FILM', w / 2, zoneY);
                 
-                // Improved underline with gradient effect
-                const textWidth = ctx.measureText(studioText).width;
-                const underlineY = zoneY + fontSize * 0.4;
-                const underlineWidth = textWidth * 0.8; // Slightly shorter than text
-                
-                // Create gradient for underline
-                const gradient = ctx.createLinearGradient(
-                    (w / 2) - (underlineWidth / 2), underlineY,
-                    (w / 2) + (underlineWidth / 2), underlineY
-                );
-                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
-                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
-                gradient.addColorStop(1, 'rgba(255, 255, 255, 0.2)');
-                
-                ctx.strokeStyle = gradient;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo((w / 2) - (underlineWidth / 2), underlineY);
-                ctx.lineTo((w / 2) + (underlineWidth / 2), underlineY);
-                ctx.stroke();
+                // Line 2: Directed by
+                ctx.font = `700 ${fontSize}px ${styling.creditsFont}`;
+                ctx.fillText(`DIRECTED BY ${director.toUpperCase()}`, w / 2, zoneY + lineHeight);
                 
                 ctx.restore();
             }
 
-            renderMetadataSection(ctx, concept, w, h, zone, styling) {
+            renderTechnicalBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
-                const fontSize = Math.max(11, Math.floor(w / 70));
-                const lineHeight = fontSize * 1.3;
+                const fontSize = Math.max(9, Math.floor(w / 85));
+                const lineHeight = fontSize * 1.4;
                 
                 ctx.save();
                 ctx.font = `400 ${fontSize}px ${styling.creditsFont}`;
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
                 ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                ctx.shadowBlur = 1;
                 
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                ctx.shadowBlur = 2;
+                // Technical credits block - multiple lines like real posters
+                const technicalLines = [
+                    'EXECUTIVE PRODUCERS MICHAEL CHEN • SARAH WILLIAMS • DAVID MARTINEZ',
+                    'MUSIC BY JAMES NEWTON HOWARD  CINEMATOGRAPHER ROGER DEAKINS',
+                    'PRODUCTION DESIGNER SARAH GREENWOOD  EDITOR ACE SMITH',
+                    'COSTUME DESIGNER JENNY BEAVAN  PRODUCED BY ABNORMAL STUDIOS'
+                ];
                 
-                const runtimes = ['89 MINUTES', '95 MINUTES', '103 MINUTES', '117 MINUTES', '124 MINUTES'];
+                // Draw each line with proper spacing
+                technicalLines.forEach((line, index) => {
+                    const yPos = zoneY + (index * lineHeight);
+                    
+                    // Ensure text fits within poster width
+                    let displayLine = line;
+                    const maxWidth = w * 0.95;
+                    
+                    while (ctx.measureText(displayLine).width > maxWidth && displayLine.length > 50) {
+                        const lastSpace = displayLine.lastIndexOf(' ', displayLine.length - 10);
+                        if (lastSpace > 20) {
+                            displayLine = displayLine.substring(0, lastSpace) + '...';
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    ctx.fillText(displayLine, w / 2, yPos);
+                });
+                
+                // Copyright and rating at the bottom
+                ctx.font = `400 ${Math.floor(fontSize * 0.9)}px ${styling.creditsFont}`;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                const copyrightY = zoneY + (technicalLines.length * lineHeight) + (lineHeight * 0.8);
+                
+                const runtimes = ['89 MIN', '95 MIN', '103 MIN', '117 MIN', '124 MIN'];
                 const runtime = runtimes[Math.floor(Math.random() * runtimes.length)];
-                
-                // Enhanced metadata line with better formatting
-                const ratingLine = `NR  •  ${runtime}`;
-                ctx.fillText(ratingLine, w / 2, zoneY);
-                
-                // More professional copyright with better spacing
-                const copyrightLine = `© ${new Date().getFullYear()} ABNORMAL STUDIOS`;
-                ctx.fillText(copyrightLine, w / 2, zoneY + lineHeight);
-                
-                // Add subtle decorative line above metadata
-                const lineY = zoneY - fontSize * 0.8;
-                const lineWidth = w * 0.3;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo((w / 2) - (lineWidth / 2), lineY);
-                ctx.lineTo((w / 2) + (lineWidth / 2), lineY);
-                ctx.stroke();
+                ctx.fillText(`© ${new Date().getFullYear()} ABNORMAL STUDIOS  •  ${runtime}  •  NR`, w / 2, copyrightY);
                 
                 ctx.restore();
             }
