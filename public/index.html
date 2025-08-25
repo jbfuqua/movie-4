@@ -82,6 +82,33 @@
             background: rgba(59, 130, 246, 0.6);
             border-radius: 3px;
         }
+
+        /* Style for the comparison container */
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .comparison-poster {
+            aspect-ratio: 4/5;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .comparison-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10;
+        }
         
         @media (max-width: 768px) {
             .floating {
@@ -102,7 +129,7 @@
             }
 			
 		    #poster-container {
-				aspect-ratio: 4 / 5 !important; /* Match canvas ratio for mobile too */
+				aspect-ratio: 4 / 5 !important;
 			}
     
 			#poster-image {
@@ -111,12 +138,17 @@
 				object-fit: contain !important;
 				object-position: center !important;
 			}
+
+            .comparison-container {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
 			
         }
 		
 		@media (min-width: 769px) {
 			#poster-container {
-				aspect-ratio: 4 / 5 !important; /* Match your canvas ratio exactly */
+				aspect-ratio: 4 / 5 !important;
 			}
 			
 			#poster-image {
@@ -166,7 +198,8 @@
                     </div>
                 </div>
                 
-                <div id="poster-container" class="w-full max-w-lg mx-auto aspect-[2/3] rounded-xl overflow-hidden poster-glow floating relative">
+                <!-- Single poster view -->
+                <div id="single-poster-view" class="w-full max-w-lg mx-auto aspect-[2/3] rounded-xl overflow-hidden poster-glow floating relative">
                     <div id="loader" class="absolute inset-0 bg-gray-800 flex items-center justify-center z-10">
                         <div class="text-center">
                             <svg aria-hidden="true" class="w-16 h-16 text-gray-400 animate-spin fill-blue-600 mx-auto mb-4" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -181,6 +214,23 @@
                     </div>
                     <img id="poster-image" src="" alt="Generated Movie Poster" class="hidden w-full h-full object-cover">
                 </div>
+
+                <!-- NEW: Comparison view -->
+                <div id="comparison-view" class="hidden w-full max-w-4xl mx-auto">
+                    <div class="comparison-container">
+                        <div class="comparison-poster poster-glow floating">
+                            <div class="comparison-label">AI Generated Text</div>
+                            <img id="ai-text-poster" src="" alt="AI Generated Text Poster" class="w-full h-full object-cover">
+                        </div>
+                        <div class="comparison-poster poster-glow floating">
+                            <div class="comparison-label">Professional Overlay</div>
+                            <img id="overlay-text-poster" src="" alt="Professional Overlay Poster" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <p class="text-gray-400 text-sm">Click on either poster to view it full size</p>
+                    </div>
+                </div>
             </div>
 
             <div class="xl:col-span-1 space-y-6">
@@ -193,6 +243,18 @@
                             <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1"></span>
                           </button>
                         </div>
+
+                        <!-- NEW: Text Style Selection -->
+                        <div>
+                            <label class="text-sm font-medium text-gray-300 block mb-2">Text Style</label>
+                            <select id="text-style-filter" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white">
+                                <option value="ai-generated">AI Generated Text</option>
+                                <option value="professional-overlay">Professional Overlay</option>
+                                <option value="both-comparison">Generate Both (Comparison)</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">AI Generated lets Gemini create natural titles, Professional Overlay uses canvas-based rendering</p>
+                        </div>
+
                         <button id="generate-btn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none neon-glow">
                             <span id="btn-text">Generate New Poster</span>
                         </button>
@@ -264,6 +326,24 @@
                             <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Synopsis</label>
                             <p id="synopsis-text" class="text-sm text-gray-200 leading-relaxed">-</p>
                         </div>
+
+                        <!-- NEW: Text Style Results -->
+                        <div id="text-style-results" class="border-l-4 border-cyan-500 pl-4 hidden">
+                            <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Text Style Used</label>
+                            <p id="text-style-used" class="text-sm text-cyan-300">-</p>
+                            <div id="comparison-actions" class="mt-2 space-x-2 hidden">
+                                <button id="show-ai-only" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-all">
+                                    Show AI Only
+                                </button>
+                                <button id="show-overlay-only" class="px-3 py-1 bg-purple-600 hover:bg-purple-700 rounded text-xs transition-all">
+                                    Show Overlay Only
+                                </button>
+                                <button id="show-comparison" class="px-3 py-1 bg-cyan-600 hover:bg-cyan-700 rounded text-xs transition-all">
+                                    Show Comparison
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="border-l-4 border-pink-500 pl-4">
                             <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Instagram Caption</label>
                             <div class="bg-gray-800 p-3 rounded-lg mt-2">
@@ -358,6 +438,11 @@
                 this.autoTimer = null;
                 this.recentPosters = [];
                 this.currentConcept = null;
+                this.currentTextStyle = 'professional-overlay'; // Default to current behavior
+                
+                // NEW: Store both versions when generating comparison
+                this.currentAiTextPoster = null;
+                this.currentOverlayPoster = null;
                 
                 this.initializeElements();
                 this.setupEventListeners();
@@ -392,6 +477,7 @@
                     genreFilter: document.getElementById('genre-filter'),
                     eraFilter: document.getElementById('era-filter'),
                     artStyleFilter: document.getElementById('art-style-filter'),
+                    textStyleFilter: document.getElementById('text-style-filter'), // NEW
                     saveBtn: document.getElementById('save-btn'),
                     shareBtn: document.getElementById('share-btn'),
                     
@@ -404,7 +490,19 @@
                     retryBtn: document.getElementById('retry-btn'),
                     
                     recentPosters: document.getElementById('recent-posters'),
-                    canvas: document.getElementById('poster-canvas')
+                    canvas: document.getElementById('poster-canvas'),
+
+                    // NEW: Comparison elements
+                    singlePosterView: document.getElementById('single-poster-view'),
+                    comparisonView: document.getElementById('comparison-view'),
+                    aiTextPoster: document.getElementById('ai-text-poster'),
+                    overlayTextPoster: document.getElementById('overlay-text-poster'),
+                    textStyleResults: document.getElementById('text-style-results'),
+                    textStyleUsed: document.getElementById('text-style-used'),
+                    comparisonActions: document.getElementById('comparison-actions'),
+                    showAiOnly: document.getElementById('show-ai-only'),
+                    showOverlayOnly: document.getElementById('show-overlay-only'),
+                    showComparison: document.getElementById('show-comparison')
                 };
                 
                 this.nodTheme = false;
@@ -440,16 +538,66 @@
                 this.elements.copyCaptionBtn.addEventListener('click', function() { self.copyInstagramCaption(); });
                 this.elements.copySongBtn.addEventListener('click', function() { self.copySongInfo(); });
                 
+                // NEW: Text style change handler
+                this.elements.textStyleFilter.addEventListener('change', () => {
+                    this.currentTextStyle = this.elements.textStyleFilter.value;
+                    console.log('Text style changed to:', this.currentTextStyle);
+                });
+                
                 if (this.elements.nodToggle) {
                     this.elements.nodToggle.addEventListener('click', () => {
                         this.nodTheme = !this.nodTheme;
                         const knob = this.elements.nodToggle.querySelector('span');
-                        this.elements.nodToggle.classList.toggle('bg-red-600', this.nodTheme); // Changed to red for hardcore
+                        this.elements.nodToggle.classList.toggle('bg-red-600', this.nodTheme);
                         knob.style.transform = this.nodTheme ? 'translateX(1.25rem)' : 'translateX(0.25rem)';
                     });
                 }
+
+                // NEW: Comparison view handlers
+                this.elements.aiTextPoster.addEventListener('click', () => {
+                    this.showSingleView('ai');
+                });
+
+                this.elements.overlayTextPoster.addEventListener('click', () => {
+                    this.showSingleView('overlay');
+                });
+
+                this.elements.showAiOnly.addEventListener('click', () => {
+                    this.showSingleView('ai');
+                });
+
+                this.elements.showOverlayOnly.addEventListener('click', () => {
+                    this.showSingleView('overlay');
+                });
+
+                this.elements.showComparison.addEventListener('click', () => {
+                    this.showComparisonView();
+                });
                 
                 console.log('Event listeners set up');
+            }
+
+            // NEW: View management methods
+            showSingleView(type) {
+                this.elements.singlePosterView.classList.remove('hidden');
+                this.elements.comparisonView.classList.add('hidden');
+                
+                if (type === 'ai' && this.currentAiTextPoster) {
+                    this.elements.posterImage.src = this.currentAiTextPoster;
+                    this.elements.textStyleUsed.textContent = 'AI Generated Text (Single View)';
+                } else if (type === 'overlay' && this.currentOverlayPoster) {
+                    this.elements.posterImage.src = this.currentOverlayPoster;
+                    this.elements.textStyleUsed.textContent = 'Professional Overlay (Single View)';
+                }
+                
+                this.elements.posterImage.classList.remove('hidden');
+                this.elements.loader.classList.add('hidden');
+            }
+
+            showComparisonView() {
+                this.elements.singlePosterView.classList.add('hidden');
+                this.elements.comparisonView.classList.remove('hidden');
+                this.elements.textStyleUsed.textContent = 'Both Styles (Comparison View)';
             }
 
             async handleGenerationSafely() {
@@ -491,9 +639,10 @@
             updateProgress(stage, percentage) {
                 const stages = {
                     'concept': 'Generating concept...',
-                    'image': 'Creating artwork...',
-                    'text': 'Composing poster...',
-                    'hardcore': 'Applying hardcore elements...',
+                    'ai-image': 'Creating AI artwork with text...',
+                    'base-image': 'Creating base artwork...',
+                    'overlay': 'Adding professional overlay...',
+                    'comparison': 'Preparing comparison...',
                     'complete': 'Complete!'
                 };
                 
@@ -513,7 +662,7 @@
                     genreFilter: this.elements.genreFilter.value,
                     eraFilter: this.elements.eraFilter.value,
                     nodTheme: this.nodTheme,
-                    preventText: true
+                    preventText: this.currentTextStyle !== 'ai-generated' // Only prevent text if not using AI-generated
                 };
 
                 try {
@@ -545,13 +694,16 @@
                 }
             }
 
-            async generateImage(visualElements, concept) {
-                console.log("Generating image...");
-                this.updateProgress('image', 50);
+            // NEW: Generate image with different text approaches
+            async generateImage(visualElements, concept, allowText = false) {
+                const stage = allowText ? 'ai-image' : 'base-image';
+                console.log(`Generating image (${stage})...`);
+                this.updateProgress(stage, 50);
                 
                 const payload = {
                     visualElements: visualElements,
-                    concept: concept
+                    concept: concept,
+                    allowText: allowText // NEW: Pass this to the backend
                 };
 
                 try {
@@ -570,28 +722,43 @@
                     const result = JSON.parse(responseText);
                     
                     if (result.success && result.imageUrl) {
-                        console.log("✅ Image generated successfully");
-                        this.updateProgress('image', 70);
+                        console.log(`✅ Image generated successfully (${stage})`);
+                        this.updateProgress(stage, 70);
                         return result.imageUrl;
                     } else {
                         throw new Error(result.error || "Invalid response from backend");
                     }
                 } catch (error) {
-                    console.error("Error generating image:", error);
-                    this.showError('Failed to generate image: ' + error.message);
+                    console.error(`Error generating image (${stage}):`, error);
+                    this.showError(`Failed to generate image (${stage}): ` + error.message);
                     return null;
                 }
             }
 
-            buildVisualIntent(concept) {
+            // UPDATED: Build visual intent with text control
+            buildVisualIntent(concept, allowText = false) {
                 const genrePref = this.elements.genreFilter?.value || 'any';
                 const eraPref = this.elements.eraFilter?.value || concept.decade || 'any';
                 const artStyle = this.elements.artStyleFilter?.value || 'authentic';
                 
-                // Enhanced text prevention prompts
-                const textPreventionPrompts = [
-                    'image ready for custom overlay'
-                ];
+                // Different approaches for text
+                let textInstructions = [];
+                if (allowText) {
+                    // AI-generated text mode - encourage natural text generation
+                    textInstructions = [
+                        `Movie title: "${concept.title}"`,
+                        `Tagline: "${concept.tagline}"`,
+                        'Include movie title and tagline naturally integrated into the poster design',
+                        'Professional movie poster typography and layout',
+                        'Era-appropriate text styling and placement'
+                    ];
+                } else {
+                    // Professional overlay mode - prevent text
+                    textInstructions = [
+                        'image ready for custom overlay',
+                        'CRITICAL: This is concept art - no text, no words, no letters, no typography, no movie titles, no credits anywhere'
+                    ];
+                }
                 
                 // Hardcore mode modifications
                 let hardcoreElements = '';
@@ -602,7 +769,6 @@
                     } else if (genreLower.includes('sci-fi')) {
                         hardcoreElements = 'dystopian cyberpunk aesthetic, dark futuristic technology, industrial sci-fi elements, brutal alien environments, harsh technological landscapes, gritty space horror vibes, menacing robotic forms (PG-13 appropriate)';
                     } else {
-                        // Default hardcore mode for other genres
                         hardcoreElements = 'intense dramatic atmosphere, dark cinematic mood, harsh lighting contrasts, gritty realism, edgy visual style (PG-13 appropriate)';
                     }
                 }
@@ -612,21 +778,20 @@
                     `Genre: ${concept.genre || 'cinematic thriller'}`,
                     `Era: ${concept.decade || 'modern'} authentic visual style`,
                     `Visual story: ${concept.synopsis || 'compelling narrative'}`,
-                    hardcoreElements, // Add hardcore elements here
+                    hardcoreElements,
                     'High-end movie concept artwork composition',
                     'Portrait orientation, cinematic framing',
                     'Professional studio lighting setup',
                     'Rich color palette with strong visual contrast',
-                    ...textPreventionPrompts,
-                    'Premium cinematic illustration, artwork reference only (no text).',
+                    ...textInstructions,
+                    'Premium cinematic illustration',
                     'PG-13 rating appropriate content',
                     'Professional visual presentation'
-                ].filter(Boolean); // Remove any empty strings
+                ].filter(Boolean);
 
-                const finalPrompt = professionalSpecs.filter(Boolean).join('. ') + 
-                    '. CRITICAL: This is concept art.';
+                const finalPrompt = professionalSpecs.filter(Boolean).join('. ');
                     
-                console.log('🚫 Enhanced text prevention prompt generated');
+                console.log(`🎯 Visual intent generated (${allowText ? 'with text' : 'text-free'})`);
                 return finalPrompt;
             }
 
@@ -640,8 +805,8 @@
                             const canvas = this.elements.canvas;
                             const ctx = this.ctx;
                             
-                            console.log('📐 Canvas dimensions:', canvas.width, 'x', canvas.height);
-                            console.log('📐 Image dimensions:', img.width, 'x', img.height);
+                            console.log('🔍 Canvas dimensions:', canvas.width, 'x', canvas.height);
+                            console.log('🔍 Image dimensions:', img.width, 'x', img.height);
                             
                             // Clear canvas
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -659,7 +824,7 @@
                             const x = (canvas.width - scaledWidth) / 2;
                             const y = (canvas.height - scaledHeight) / 2;
                             
-                            console.log('📐 Scaled image:', scaledWidth, 'x', scaledHeight, 'at', x, ',', y);
+                            console.log('🔍 Scaled image:', scaledWidth, 'x', scaledHeight, 'at', x, ',', y);
                             
                             // Draw image to canvas
                             ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
@@ -808,266 +973,262 @@
                 return eraStyles[decade] || eraStyles['1980s'];
             }
 
-// Replace your renderProfessionalTitle function with this enhanced version:
+            renderProfessionalTitle(ctx, concept, w, h, styling) {
+                const titleText = (concept?.title || 'UNTITLED').toUpperCase();
+                const tagline = concept?.tagline || '';
+                const decade = concept.decade || '1980s';
+                
+                // Calculate font sizes
+                let titleSize = Math.min(Math.floor(w / 8), 120);
+                const taglineSize = Math.floor(titleSize * 0.3);
+                
+                const titleY = h * 0.15;
+                const maxTitleWidth = w * 0.9;
+                
+                // Enhanced era-specific styling with effects
+                const eraEffects = {
+                    '1950s': {
+                        font: `${styling.titleWeight} ${titleSize}px serif, "Times New Roman", Georgia`,
+                        strokeWidth: 2,
+                        shadowOffsetX: 4,
+                        shadowOffsetY: 4,
+                        shadowBlur: 6,
+                        shadowColor: 'rgba(139, 69, 19, 0.8)', // Brown shadow for vintage feel
+                        effectType: 'classic'
+                    },
+                    '1960s': {
+                        font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
+                        strokeWidth: 3,
+                        shadowOffsetX: 3,
+                        shadowOffsetY: 3,
+                        shadowBlur: 8,
+                        shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
+                            'rgba(0, 255, 255, 0.6)' : 'rgba(255, 20, 147, 0.7)', // Cyan for sci-fi, hot pink for others
+                        effectType: 'psychedelic'
+                    },
+                    '1970s': {
+                        font: `900 ${titleSize}px "Bebas Neue", "Impact", sans-serif`,
+                        strokeWidth: 4,
+                        shadowOffsetX: 6,
+                        shadowOffsetY: 6,
+                        shadowBlur: 12,
+                        shadowColor: 'rgba(139, 69, 19, 0.8)', // Earth tones
+                        effectType: 'groove'
+                    },
+                    '1980s': {
+                        font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
+                        strokeWidth: 6,
+                        shadowOffsetX: 4,
+                        shadowOffsetY: 4,
+                        shadowBlur: 20,
+                        shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
+                            'rgba(0, 255, 255, 0.9)' : 'rgba(255, 0, 255, 0.9)', // Neon colors
+                        effectType: 'neon'
+                    },
+                    '1990s': {
+                        font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
+                        strokeWidth: 3,
+                        shadowOffsetX: 2,
+                        shadowOffsetY: 2,
+                        shadowBlur: 8,
+                        shadowColor: 'rgba(0, 0, 0, 0.8)',
+                        effectType: 'emboss'
+                    },
+                    '2000s': {
+                        font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
+                        strokeWidth: 2,
+                        shadowOffsetX: 1,
+                        shadowOffsetY: 1,
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(0, 0, 0, 0.6)',
+                        effectType: 'clean'
+                    },
+                    '2010s': {
+                        font: `600 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
+                        strokeWidth: 1,
+                        shadowOffsetX: 0,
+                        shadowOffsetY: 2,
+                        shadowBlur: 8,
+                        shadowColor: 'rgba(0, 0, 0, 0.5)',
+                        effectType: 'minimal'
+                    },
+                    '2020s': {
+                        font: `500 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
+                        strokeWidth: 1,
+                        shadowOffsetX: 0,
+                        shadowOffsetY: 1,
+                        shadowBlur: 4,
+                        shadowColor: 'rgba(0, 0, 0, 0.3)',
+                        effectType: 'modern'
+                    }
+                };
+                
+                const effects = eraEffects[decade] || eraEffects['1980s'];
+                
+                ctx.save();
+                ctx.font = effects.font;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Auto-resize if too wide
+                let titleWidth = ctx.measureText(titleText).width;
+                let currentSize = titleSize;
+                while (titleWidth > maxTitleWidth && currentSize > 32) {
+                    currentSize -= 4;
+                    effects.font = effects.font.replace(/\d+px/, `${currentSize}px`);
+                    ctx.font = effects.font;
+                    titleWidth = ctx.measureText(titleText).width;
+                }
+                
+                // Apply era-specific effects
+                this.applyTitleEffects(ctx, titleText, w / 2, titleY, effects, styling, decade);
+                
+                ctx.restore();
+                
+                // Tagline rendering (unchanged)
+                if (tagline) {
+                    ctx.save();
+                    ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    const taglineY = titleY + currentSize * 0.8;
+                    const maxTaglineWidth = w * 0.85;
+                    const lineHeight = taglineSize * 1.2;
+                    
+                    const taglineWidth = ctx.measureText(tagline).width;
+                    
+                    if (taglineWidth <= maxTaglineWidth) {
+                        // Single line
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
+                        
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText(tagline, w / 2, taglineY);
+                    } else {
+                        // Multi-line wrapping logic (same as before)
+                        const words = tagline.split(' ');
+                        const lines = [];
+                        let currentLine = '';
+                        
+                        for (let i = 0; i < words.length; i++) {
+                            const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
+                            const testWidth = ctx.measureText(testLine).width;
+                            
+                            if (testWidth > maxTaglineWidth && currentLine) {
+                                lines.push(currentLine);
+                                currentLine = words[i];
+                            } else {
+                                currentLine = testLine;
+                            }
+                        }
+                        
+                        if (currentLine) lines.push(currentLine);
+                        if (lines.length > 2) {
+                            lines[1] = lines[1] + '...';
+                            lines.length = 2;
+                        }
+                        
+                        const totalHeight = lines.length * lineHeight;
+                        const startY = taglineY - (totalHeight / 2) + (lineHeight / 2);
+                        
+                        lines.forEach((line, index) => {
+                            const lineY = startY + (index * lineHeight);
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                            ctx.fillText(line, w / 2 + 2, lineY + 2);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                            ctx.shadowBlur = 4;
+                            ctx.fillText(line, w / 2, lineY);
+                        });
+                    }
+                    
+                    ctx.restore();
+                }
+            }
 
-// Replace your renderProfessionalTitle function with this enhanced version:
-
-			renderProfessionalTitle(ctx, concept, w, h, styling) {
-				const titleText = (concept?.title || 'UNTITLED').toUpperCase();
-				const tagline = concept?.tagline || '';
-				const decade = concept.decade || '1980s';
-				
-				// Calculate font sizes
-				let titleSize = Math.min(Math.floor(w / 8), 120);
-				const taglineSize = Math.floor(titleSize * 0.3);
-				
-				const titleY = h * 0.15;
-				const maxTitleWidth = w * 0.9;
-				
-				// Enhanced era-specific styling with effects
-				const eraEffects = {
-					'1950s': {
-						font: `${styling.titleWeight} ${titleSize}px serif, "Times New Roman", Georgia`,
-						strokeWidth: 2,
-						shadowOffsetX: 4,
-						shadowOffsetY: 4,
-						shadowBlur: 6,
-						shadowColor: 'rgba(139, 69, 19, 0.8)', // Brown shadow for vintage feel
-						effectType: 'classic'
-					},
-					'1960s': {
-						font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
-						strokeWidth: 3,
-						shadowOffsetX: 3,
-						shadowOffsetY: 3,
-						shadowBlur: 8,
-						shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
-							'rgba(0, 255, 255, 0.6)' : 'rgba(255, 20, 147, 0.7)', // Cyan for sci-fi, hot pink for others
-						effectType: 'psychedelic'
-					},
-					'1970s': {
-						font: `900 ${titleSize}px "Bebas Neue", "Impact", sans-serif`,
-						strokeWidth: 4,
-						shadowOffsetX: 6,
-						shadowOffsetY: 6,
-						shadowBlur: 12,
-						shadowColor: 'rgba(139, 69, 19, 0.8)', // Earth tones
-						effectType: 'groove'
-					},
-					'1980s': {
-						font: `900 ${titleSize}px "Impact", "Arial Black", sans-serif`,
-						strokeWidth: 6,
-						shadowOffsetX: 4,
-						shadowOffsetY: 4,
-						shadowBlur: 20,
-						shadowColor: styling.genre?.toLowerCase().includes('sci-fi') ? 
-							'rgba(0, 255, 255, 0.9)' : 'rgba(255, 0, 255, 0.9)', // Neon colors
-						effectType: 'neon'
-					},
-					'1990s': {
-						font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
-						strokeWidth: 3,
-						shadowOffsetX: 2,
-						shadowOffsetY: 2,
-						shadowBlur: 8,
-						shadowColor: 'rgba(0, 0, 0, 0.8)',
-						effectType: 'emboss'
-					},
-					'2000s': {
-						font: `700 ${titleSize}px "Arial", "Helvetica", sans-serif`,
-						strokeWidth: 2,
-						shadowOffsetX: 1,
-						shadowOffsetY: 1,
-						shadowBlur: 10,
-						shadowColor: 'rgba(0, 0, 0, 0.6)',
-						effectType: 'clean'
-					},
-					'2010s': {
-						font: `600 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
-						strokeWidth: 1,
-						shadowOffsetX: 0,
-						shadowOffsetY: 2,
-						shadowBlur: 8,
-						shadowColor: 'rgba(0, 0, 0, 0.5)',
-						effectType: 'minimal'
-					},
-					'2020s': {
-						font: `500 ${titleSize}px "Helvetica Neue", "Arial", sans-serif`,
-						strokeWidth: 1,
-						shadowOffsetX: 0,
-						shadowOffsetY: 1,
-						shadowBlur: 4,
-						shadowColor: 'rgba(0, 0, 0, 0.3)',
-						effectType: 'modern'
-					}
-				};
-				
-				const effects = eraEffects[decade] || eraEffects['1980s'];
-				
-				ctx.save();
-				ctx.font = effects.font;
-				ctx.textAlign = 'center';
-				ctx.textBaseline = 'middle';
-				
-				// Auto-resize if too wide
-				let titleWidth = ctx.measureText(titleText).width;
-				let currentSize = titleSize;
-				while (titleWidth > maxTitleWidth && currentSize > 32) {
-					currentSize -= 4;
-					effects.font = effects.font.replace(/\d+px/, `${currentSize}px`);
-					ctx.font = effects.font;
-					titleWidth = ctx.measureText(titleText).width;
-				}
-				
-				// Apply era-specific effects
-				this.applyTitleEffects(ctx, titleText, w / 2, titleY, effects, styling, decade);
-				
-				ctx.restore();
-				
-				// Tagline rendering (unchanged)
-				if (tagline) {
-					ctx.save();
-					ctx.font = `400 ${taglineSize}px ${styling.creditsFont}`;
-					ctx.textAlign = 'center';
-					ctx.textBaseline = 'middle';
-					
-					const taglineY = titleY + currentSize * 0.8;
-					const maxTaglineWidth = w * 0.85;
-					const lineHeight = taglineSize * 1.2;
-					
-					const taglineWidth = ctx.measureText(tagline).width;
-					
-					if (taglineWidth <= maxTaglineWidth) {
-						// Single line
-						ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-						ctx.fillText(tagline, w / 2 + 2, taglineY + 2);
-						
-						ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-						ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-						ctx.shadowBlur = 4;
-						ctx.fillText(tagline, w / 2, taglineY);
-					} else {
-						// Multi-line wrapping logic (same as before)
-						const words = tagline.split(' ');
-						const lines = [];
-						let currentLine = '';
-						
-						for (let i = 0; i < words.length; i++) {
-							const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
-							const testWidth = ctx.measureText(testLine).width;
-							
-							if (testWidth > maxTaglineWidth && currentLine) {
-								lines.push(currentLine);
-								currentLine = words[i];
-							} else {
-								currentLine = testLine;
-							}
-						}
-						
-						if (currentLine) lines.push(currentLine);
-						if (lines.length > 2) {
-							lines[1] = lines[1] + '...';
-							lines.length = 2;
-						}
-						
-						const totalHeight = lines.length * lineHeight;
-						const startY = taglineY - (totalHeight / 2) + (lineHeight / 2);
-						
-						lines.forEach((line, index) => {
-							const lineY = startY + (index * lineHeight);
-							ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-							ctx.fillText(line, w / 2 + 2, lineY + 2);
-							ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-							ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-							ctx.shadowBlur = 4;
-							ctx.fillText(line, w / 2, lineY);
-						});
-					}
-					
-					ctx.restore();
-				}
-			}
-
-			// NEW: Helper function for applying era-specific title effects
-			applyTitleEffects(ctx, text, x, y, effects, styling, decade) {
-				switch (effects.effectType) {
-					case 'neon': // 1980s neon effect
-						// Outer glow
-						ctx.shadowColor = effects.shadowColor;
-						ctx.shadowBlur = effects.shadowBlur;
-						ctx.strokeStyle = effects.shadowColor.replace('0.9', '1.0');
-						ctx.lineWidth = effects.strokeWidth + 2;
-						ctx.strokeText(text, x, y);
-						
-						// Inner stroke
-						ctx.shadowBlur = effects.shadowBlur / 2;
-						ctx.strokeStyle = styling.titleColor;
-						ctx.lineWidth = effects.strokeWidth;
-						ctx.strokeText(text, x, y);
-						
-						// Fill
-						ctx.shadowBlur = 0;
-						ctx.fillStyle = styling.titleColor;
-						ctx.fillText(text, x, y);
-						break;
-						
-					case 'groove': // 1970s groove/embossed effect
-						// Deep shadow
-						ctx.fillStyle = effects.shadowColor;
-						ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
-						
-						// Highlight
-						ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-						ctx.fillText(text, x - 2, y - 2);
-						
-						// Main text
-						ctx.fillStyle = styling.titleColor;
-						ctx.fillText(text, x, y);
-						break;
-						
-					case 'psychedelic': // 1960s psychedelic effect
-						// Multiple colored shadows for trippy effect
-						const colors = ['rgba(255, 0, 255, 0.5)', 'rgba(0, 255, 255, 0.5)', 'rgba(255, 255, 0, 0.5)'];
-						colors.forEach((color, i) => {
-							ctx.fillStyle = color;
-							ctx.fillText(text, x + (i + 1) * 2, y + (i + 1) * 2);
-						});
-						
-						// Main text with stroke
-						ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-						ctx.lineWidth = 2;
-						ctx.strokeText(text, x, y);
-						ctx.fillStyle = styling.titleColor;
-						ctx.fillText(text, x, y);
-						break;
-						
-					case 'emboss': // 1990s embossed effect
-						// Dark shadow
-						ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-						ctx.fillText(text, x + 3, y + 3);
-						
-						// Light highlight
-						ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-						ctx.fillText(text, x - 1, y - 1);
-						
-						// Main text
-						ctx.fillStyle = styling.titleColor;
-						ctx.fillText(text, x, y);
-						break;
-						
-					default: // Classic/clean/minimal/modern
-						// Standard shadow
-						ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-						ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
-						
-						// Main text with glow
-						ctx.shadowColor = styling.titleGlow;
-						ctx.shadowBlur = styling.glowIntensity;
-						ctx.fillStyle = styling.titleColor;
-						ctx.fillText(text, x, y);
-						break;
-				}
-			}
+            // Helper function for applying era-specific title effects
+            applyTitleEffects(ctx, text, x, y, effects, styling, decade) {
+                switch (effects.effectType) {
+                    case 'neon': // 1980s neon effect
+                        // Outer glow
+                        ctx.shadowColor = effects.shadowColor;
+                        ctx.shadowBlur = effects.shadowBlur;
+                        ctx.strokeStyle = effects.shadowColor.replace('0.9', '1.0');
+                        ctx.lineWidth = effects.strokeWidth + 2;
+                        ctx.strokeText(text, x, y);
+                        
+                        // Inner stroke
+                        ctx.shadowBlur = effects.shadowBlur / 2;
+                        ctx.strokeStyle = styling.titleColor;
+                        ctx.lineWidth = effects.strokeWidth;
+                        ctx.strokeText(text, x, y);
+                        
+                        // Fill
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = styling.titleColor;
+                        ctx.fillText(text, x, y);
+                        break;
+                        
+                    case 'groove': // 1970s groove/embossed effect
+                        // Deep shadow
+                        ctx.fillStyle = effects.shadowColor;
+                        ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
+                        
+                        // Highlight
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.fillText(text, x - 2, y - 2);
+                        
+                        // Main text
+                        ctx.fillStyle = styling.titleColor;
+                        ctx.fillText(text, x, y);
+                        break;
+                        
+                    case 'psychedelic': // 1960s psychedelic effect
+                        // Multiple colored shadows for trippy effect
+                        const colors = ['rgba(255, 0, 255, 0.5)', 'rgba(0, 255, 255, 0.5)', 'rgba(255, 255, 0, 0.5)'];
+                        colors.forEach((color, i) => {
+                            ctx.fillStyle = color;
+                            ctx.fillText(text, x + (i + 1) * 2, y + (i + 1) * 2);
+                        });
+                        
+                        // Main text with stroke
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.lineWidth = 2;
+                        ctx.strokeText(text, x, y);
+                        ctx.fillStyle = styling.titleColor;
+                        ctx.fillText(text, x, y);
+                        break;
+                        
+                    case 'emboss': // 1990s embossed effect
+                        // Dark shadow
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                        ctx.fillText(text, x + 3, y + 3);
+                        
+                        // Light highlight
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                        ctx.fillText(text, x - 1, y - 1);
+                        
+                        // Main text
+                        ctx.fillStyle = styling.titleColor;
+                        ctx.fillText(text, x, y);
+                        break;
+                        
+                    default: // Classic/clean/minimal/modern
+                        // Standard shadow
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                        ctx.fillText(text, x + effects.shadowOffsetX, y + effects.shadowOffsetY);
+                        
+                        // Main text with glow
+                        ctx.shadowColor = styling.titleGlow;
+                        ctx.shadowBlur = styling.glowIntensity;
+                        ctx.fillStyle = styling.titleColor;
+                        ctx.fillText(text, x, y);
+                        break;
+                }
+            }
 
             renderProfessionalCredits(ctx, concept, w, h, styling) {
                 const creditZones = {
@@ -1083,100 +1244,100 @@
                 this.renderTechnicalBlock(ctx, concept, w, h, creditZones.technical, styling);
             }
 
+            renderCastBlock(ctx, cast, w, h, zone, styling) {
+                const zoneY = h * zone.start;
+                const zoneHeight = h * zone.height;
+                
+                // Larger font size but more conservative
+                let fontSize = Math.max(18, Math.floor(w / 35)); // Less aggressive than w/30
+                const maxFontSize = Math.floor(w / 28);
+                fontSize = Math.min(fontSize, maxFontSize);
+                
+                ctx.save();
+                ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+                ctx.textAlign = 'center';
+                
+                // Professional movie poster shadow
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                ctx.shadowBlur = 3;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                // Wider columns for larger text
+                const leftX = w * 0.25;
+                const rightX = w * 0.75;
+                const lineHeight = fontSize * 1.7;
+                
+                // Safety check for zone bounds
+                const maxRows = Math.floor(zoneHeight / lineHeight);
+                const maxNames = maxRows * 2;
+                const displayCast = cast.slice(0, Math.min(maxNames, cast.length));
+                
+                displayCast.forEach((actor, index) => {
+                    // Clean the actor name
+                    const cleanName = String(actor).split(' AS ')[0].trim().toUpperCase();
+                    const isLeft = index % 2 === 0;
+                    const xPos = isLeft ? leftX : rightX;
+                    const row = Math.floor(index / 2);
+                    const yPos = zoneY + (row * lineHeight);
+                    
+                    // Don't render if outside zone
+                    if (yPos + fontSize > zoneY + zoneHeight) {
+                        return;
+                    }
+                    
+                    // BETTER TEXT FITTING: More generous width and smarter truncation
+                    const maxWidth = w * 0.24; // Wider columns
+                    let displayName = cleanName;
+                    let textWidth = ctx.measureText(displayName).width;
+                    
+                    if (textWidth > maxWidth) {
+                        // Strategy 1: Try first name + last name only
+                        const words = cleanName.split(' ');
+                        if (words.length > 2) {
+                            displayName = words[0] + ' ' + words[words.length - 1];
+                            textWidth = ctx.measureText(displayName).width;
+                        }
+                        
+                        // Strategy 2: If still too long, try reducing font size for this name
+                        if (textWidth > maxWidth) {
+                            const originalFont = ctx.font;
+                            let reducedSize = fontSize;
+                            
+                            while (textWidth > maxWidth && reducedSize > fontSize * 0.7) {
+                                reducedSize -= 2;
+                                ctx.font = `600 ${reducedSize}px ${styling.creditsFont}`;
+                                textWidth = ctx.measureText(displayName).width;
+                            }
+                            
+                            // If we had to reduce too much, then truncate
+                            if (reducedSize <= fontSize * 0.7) {
+                                ctx.font = originalFont; // Reset to original size
+                                
+                                // Strategy 3: Careful truncation - keep at least 8 characters
+                                while (textWidth > maxWidth && displayName.length > 8) {
+                                    displayName = displayName.substring(0, displayName.length - 1);
+                                    textWidth = ctx.measureText(displayName).width;
+                                }
+                                
+                                // Only add ellipsis if we actually truncated significantly
+                                if (displayName.length < cleanName.length - 3) {
+                                    displayName = displayName.trim() + '...';
+                                }
+                            }
+                        }
+                    }
+                    
+                    ctx.fillText(displayName, xPos, yPos);
+                    
+                    // Reset font if we changed it
+                    ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
+                });
+                
+                ctx.restore();
+            }
 
-			renderCastBlock(ctx, cast, w, h, zone, styling) {
-				const zoneY = h * zone.start;
-				const zoneHeight = h * zone.height;
-				
-				// Larger font size but more conservative
-				let fontSize = Math.max(18, Math.floor(w / 35)); // Less aggressive than w/30
-				const maxFontSize = Math.floor(w / 28);
-				fontSize = Math.min(fontSize, maxFontSize);
-				
-				ctx.save();
-				ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-				ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
-				ctx.textAlign = 'center';
-				
-				// Professional movie poster shadow
-				ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-				ctx.shadowBlur = 3;
-				ctx.shadowOffsetX = 1;
-				ctx.shadowOffsetY = 1;
-				
-				// Wider columns for larger text
-				const leftX = w * 0.25;
-				const rightX = w * 0.75;
-				const lineHeight = fontSize * 1.7;
-				
-				// Safety check for zone bounds
-				const maxRows = Math.floor(zoneHeight / lineHeight);
-				const maxNames = maxRows * 2;
-				const displayCast = cast.slice(0, Math.min(maxNames, cast.length));
-				
-				displayCast.forEach((actor, index) => {
-					// Clean the actor name
-					const cleanName = String(actor).split(' AS ')[0].trim().toUpperCase();
-					const isLeft = index % 2 === 0;
-					const xPos = isLeft ? leftX : rightX;
-					const row = Math.floor(index / 2);
-					const yPos = zoneY + (row * lineHeight);
-					
-					// Don't render if outside zone
-					if (yPos + fontSize > zoneY + zoneHeight) {
-						return;
-					}
-					
-					// BETTER TEXT FITTING: More generous width and smarter truncation
-					const maxWidth = w * 0.24; // Wider columns
-					let displayName = cleanName;
-					let textWidth = ctx.measureText(displayName).width;
-					
-					if (textWidth > maxWidth) {
-						// Strategy 1: Try first name + last name only
-						const words = cleanName.split(' ');
-						if (words.length > 2) {
-							displayName = words[0] + ' ' + words[words.length - 1];
-							textWidth = ctx.measureText(displayName).width;
-						}
-						
-						// Strategy 2: If still too long, try reducing font size for this name
-						if (textWidth > maxWidth) {
-							const originalFont = ctx.font;
-							let reducedSize = fontSize;
-							
-							while (textWidth > maxWidth && reducedSize > fontSize * 0.7) {
-								reducedSize -= 2;
-								ctx.font = `600 ${reducedSize}px ${styling.creditsFont}`;
-								textWidth = ctx.measureText(displayName).width;
-							}
-							
-							// If we had to reduce too much, then truncate
-							if (reducedSize <= fontSize * 0.7) {
-								ctx.font = originalFont; // Reset to original size
-								
-								// Strategy 3: Careful truncation - keep at least 8 characters
-								while (textWidth > maxWidth && displayName.length > 8) {
-									displayName = displayName.substring(0, displayName.length - 1);
-									textWidth = ctx.measureText(displayName).width;
-								}
-								
-								// Only add ellipsis if we actually truncated significantly
-								if (displayName.length < cleanName.length - 3) {
-									displayName = displayName.trim() + '...';
-								}
-							}
-						}
-					}
-					
-					ctx.fillText(displayName, xPos, yPos);
-					
-					// Reset font if we changed it
-					ctx.font = `600 ${fontSize}px ${styling.creditsFont}`;
-				});
-				
-				ctx.restore();
-			}
             renderBillingBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
                 const fontSize = Math.max(12, Math.floor(w / 60));
@@ -1291,10 +1452,32 @@
                 if (this.elements.taglineText) this.elements.taglineText.textContent = concept.tagline || '-';
                 if (this.elements.synopsisText) this.elements.synopsisText.textContent = concept.synopsis || '-';
                 
+                // NEW: Update text style results
+                this.updateTextStyleResults();
+                
                 this.generateProfessionalInstagramCaption(concept);
                 this.generateAISongRecommendation(concept);
                 
-                console.log('📝 Movie info updated');
+                console.log('📋 Movie info updated');
+            }
+
+            // NEW: Update text style results UI
+            updateTextStyleResults() {
+                const textStyleMap = {
+                    'ai-generated': 'AI Generated Text',
+                    'professional-overlay': 'Professional Overlay',
+                    'both-comparison': 'Both Styles (Comparison)'
+                };
+
+                this.elements.textStyleResults.classList.remove('hidden');
+                this.elements.textStyleUsed.textContent = textStyleMap[this.currentTextStyle] || this.currentTextStyle;
+                
+                // Show/hide comparison actions based on whether we have both versions
+                if (this.currentTextStyle === 'both-comparison' && this.currentAiTextPoster && this.currentOverlayPoster) {
+                    this.elements.comparisonActions.classList.remove('hidden');
+                } else {
+                    this.elements.comparisonActions.classList.add('hidden');
+                }
             }
 
             generateProfessionalInstagramCaption(concept) {
@@ -1315,6 +1498,15 @@
                 let caption = '';
                 caption += `${genreEmoji} POSTER DROP: "${concept.title}" ${genreEmoji}\n\n`;
                 caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• HARDCORE MODE' : ''}\n`;
+                
+                // NEW: Add text style info to caption
+                const textStyleEmoji = {
+                    'ai-generated': '🤖',
+                    'professional-overlay': '🎨',
+                    'both-comparison': '⚖️'
+                };
+                
+                caption += `${textStyleEmoji[this.currentTextStyle] || '🎬'} Text Style: ${this.currentTextStyle.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
                 caption += `💫 "${concept.tagline}"\n\n`;
                 
                 const synopsis = concept.synopsis ? 
@@ -1333,7 +1525,7 @@
                     caption += `🎥 Directed by: ${concept.director}\n`;
                 }
                 
-                caption += `\n🤖 Generated with AI • What era should I explore next?\n\n`;
+                caption += `\n🤖 Generated with AI • What style should I try next?\n\n`;
                 caption += this.generateProfessionalHashtags(concept);
 
                 this.elements.instagramCaption.value = caption;
@@ -1346,6 +1538,15 @@
                     '#GenerativeAI', '#PosterDesign', '#ArtificialIntelligence',
                     '#MovieMagic', '#FilmArt', '#PosterArt'
                 ];
+                
+                // NEW: Add text style specific tags
+                if (this.currentTextStyle === 'ai-generated') {
+                    baseTags.push('#AIGeneratedText', '#AITypography', '#NaturalAI');
+                } else if (this.currentTextStyle === 'professional-overlay') {
+                    baseTags.push('#ProfessionalOverlay', '#CustomTypography', '#DigitalComposite');
+                } else if (this.currentTextStyle === 'both-comparison') {
+                    baseTags.push('#AIvsHuman', '#StyleComparison', '#DualApproach');
+                }
                 
                 if (concept.genre) {
                     const genreLower = concept.genre.toLowerCase();
@@ -1601,7 +1802,11 @@
                 this.recentPosters.forEach((poster, index) => {
                     const thumb = document.createElement('div');
                     thumb.className = 'aspect-[2/3] bg-gray-700 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all';
-                    thumb.innerHTML = '<img src="' + poster.imageUrl + '" alt="' + poster.concept.title + '" class="w-full h-full object-cover">';
+                    
+                    // Use the main poster image (could be either AI or overlay depending on what was generated)
+                    const imageUrl = poster.overlayImageUrl || poster.aiImageUrl || poster.imageUrl;
+                    thumb.innerHTML = '<img src="' + imageUrl + '" alt="' + poster.concept.title + '" class="w-full h-full object-cover">';
+                    
                     thumb.addEventListener('click', function() {
                         self.loadPosterFromRecent(index);
                     });
@@ -1611,21 +1816,49 @@
 
             loadPosterFromRecent(index) {
                 const poster = this.recentPosters[index];
-                this.elements.posterImage.src = poster.imageUrl;
+                
+                // Restore both versions if they exist
                 this.currentConcept = poster.concept;
+                this.currentAiTextPoster = poster.aiImageUrl || null;
+                this.currentOverlayPoster = poster.overlayImageUrl || null;
+                
+                // Show the appropriate view
+                if (poster.textStyle === 'both-comparison' && this.currentAiTextPoster && this.currentOverlayPoster) {
+                    this.elements.aiTextPoster.src = this.currentAiTextPoster;
+                    this.elements.overlayTextPoster.src = this.currentOverlayPoster;
+                    this.showComparisonView();
+                } else {
+                    // Show single view with the available image
+                    const imageUrl = this.currentOverlayPoster || this.currentAiTextPoster || poster.imageUrl;
+                    this.elements.posterImage.src = imageUrl;
+                    this.showSingleView(this.currentOverlayPoster ? 'overlay' : 'ai');
+                }
+                
+                this.currentTextStyle = poster.textStyle || 'professional-overlay';
+                this.elements.textStyleFilter.value = this.currentTextStyle;
+                
                 this.updateInfo(poster.concept);
-                this.elements.posterImage.classList.remove('hidden');
                 this.elements.loader.classList.add('hidden');
             }
 
             async savePoster() {
-                if (!this.elements.posterImage.src) return;
+                if (!this.elements.posterImage.src && !this.currentAiTextPoster && !this.currentOverlayPoster) return;
                 
                 try {
+                    let imageToSave = this.elements.posterImage.src;
+                    
+                    // If we're in comparison view, ask user which one to save
+                    if (this.currentTextStyle === 'both-comparison' && this.currentAiTextPoster && this.currentOverlayPoster) {
+                        const choice = confirm('Save AI Generated version? (Cancel for Professional Overlay)');
+                        imageToSave = choice ? this.currentAiTextPoster : this.currentOverlayPoster;
+                    }
+                    
                     const link = document.createElement('a');
                     const title = this.currentConcept && this.currentConcept.title ? this.currentConcept.title.replace(/\s+/g, '-') : 'generated';
-                    link.download = 'movie-poster-' + title + '.png';
-                    link.href = this.elements.posterImage.src;
+                    const stylePrefix = this.currentTextStyle === 'ai-generated' ? 'ai-' : 
+                                       this.currentTextStyle === 'professional-overlay' ? 'overlay-' : '';
+                    link.download = `${stylePrefix}movie-poster-${title}.png`;
+                    link.href = imageToSave;
                     link.click();
                 } catch (error) {
                     console.error('Error saving poster:', error);
@@ -1637,14 +1870,18 @@
                 if (!this.currentConcept) return;
                 
                 try {
+                    const textStyleInfo = this.currentTextStyle === 'both-comparison' ? ' (Comparison View)' : 
+                                         this.currentTextStyle === 'ai-generated' ? ' (AI Text)' : 
+                                         ' (Professional Overlay)';
+                    
                     if (navigator.share) {
                         await navigator.share({
-                            title: 'Movie Poster: ' + this.currentConcept.title,
-                            text: 'Check out this AI-generated poster: "' + this.currentConcept.title + '" - ' + this.currentConcept.tagline,
+                            title: 'Movie Poster: ' + this.currentConcept.title + textStyleInfo,
+                            text: 'Check out this AI-generated poster: "' + this.currentConcept.title + '" - ' + this.currentConcept.tagline + textStyleInfo,
                             url: window.location.href
                         });
                     } else {
-                        const shareText = 'Check out this AI-generated poster: "' + this.currentConcept.title + '" - ' + this.currentConcept.tagline;
+                        const shareText = 'Check out this AI-generated poster: "' + this.currentConcept.title + '" - ' + this.currentConcept.tagline + textStyleInfo;
                         await navigator.clipboard.writeText(shareText);
                         
                         const originalText = this.elements.shareBtn.textContent;
@@ -1712,10 +1949,10 @@
                 }
             }
 
-            // MAIN GENERATION FUNCTION - FIXED
+            // UPDATED: MAIN GENERATION FUNCTION with dual text support
             async handleGeneration(retryCount = 0, maxRetries = 2) {
                 try {
-                    console.log('🎬 Starting poster generation...');
+                    console.log('🎬 Starting poster generation with text style:', this.currentTextStyle);
                     this.clearError?.();
                     this.setLoadingState(true);
 
@@ -1730,45 +1967,110 @@
                     this.currentConcept = concept;
                     this.updateInfo?.(concept);
 
-                    // Step 2: Generate base image
-                    this.updateProgress('image', 35);
-                    const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept), concept);
-                    if (!baseImageUrl) {
-                        if (retryCount < maxRetries) {
-                            console.log(`🔄 Retrying entire generation process (${retryCount + 1}/${maxRetries})...`);
+                    // NEW: Handle different text style approaches
+                    if (this.currentTextStyle === 'both-comparison') {
+                        console.log('🔄 Generating both AI and overlay versions...');
+                        
+                        // Generate AI version (with text)
+                        this.updateProgress('ai-image', 35);
+                        const aiImageUrl = await this.generateImage(this.buildVisualIntent(concept, true), concept, true);
+                        if (!aiImageUrl) {
+                            if (retryCount < maxRetries) {
+                                console.log(`🔄 Retrying AI generation (${retryCount + 1}/${maxRetries})...`);
+                                this.setLoadingState(false);
+                                setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                                return;
+                            }
                             this.setLoadingState(false);
-                            setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                            this.showError('Failed to generate AI text version. Please try again.');
                             return;
                         }
-                        this.setLoadingState(false);
-                        this.showError('Failed to generate image after multiple attempts. Please try again.');
-                        return;
+                        this.currentAiTextPoster = aiImageUrl;
+                        console.log('✅ AI text version generated');
+
+                        // Generate base image (without text) for overlay
+                        this.updateProgress('base-image', 55);
+                        const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept, false), concept, false);
+                        if (!baseImageUrl) {
+                            if (retryCount < maxRetries) {
+                                console.log(`🔄 Retrying overlay generation (${retryCount + 1}/${maxRetries})...`);
+                                this.setLoadingState(false);
+                                setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                                return;
+                            }
+                            this.setLoadingState(false);
+                            this.showError('Failed to generate overlay version. Please try again.');
+                            return;
+                        }
+
+                        // Create overlay version
+                        this.updateProgress('overlay', 75);
+                        await this.loadImageToCanvas(baseImageUrl);
+                        this.addGradientOverlays();
+                        this.renderTitleAndCredits(concept);
+                        this.currentOverlayPoster = this.elements.canvas.toDataURL('image/png', 1.0);
+                        console.log('✅ Professional overlay version generated');
+
+                        // Display comparison view
+                        this.updateProgress('comparison', 90);
+                        this.elements.aiTextPoster.src = this.currentAiTextPoster;
+                        this.elements.overlayTextPoster.src = this.currentOverlayPoster;
+                        this.showComparisonView();
+
+                    } else if (this.currentTextStyle === 'ai-generated') {
+                        console.log('🤖 Generating AI text version only...');
+                        
+                        this.updateProgress('ai-image', 50);
+                        const aiImageUrl = await this.generateImage(this.buildVisualIntent(concept, true), concept, true);
+                        if (!aiImageUrl) {
+                            if (retryCount < maxRetries) {
+                                console.log(`🔄 Retrying AI generation (${retryCount + 1}/${maxRetries})...`);
+                                this.setLoadingState(false);
+                                setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                                return;
+                            }
+                            this.setLoadingState(false);
+                            this.showError('Failed to generate AI text image. Please try again.');
+                            return;
+                        }
+
+                        this.currentAiTextPoster = aiImageUrl;
+                        this.currentOverlayPoster = null;
+                        this.elements.posterImage.src = aiImageUrl;
+                        this.showSingleView('ai');
+                        console.log('✅ AI text version generated');
+
+                    } else { // professional-overlay (default)
+                        console.log('🎨 Generating professional overlay version only...');
+                        
+                        this.updateProgress('base-image', 50);
+                        const baseImageUrl = await this.generateImage(this.buildVisualIntent(concept, false), concept, false);
+                        if (!baseImageUrl) {
+                            if (retryCount < maxRetries) {
+                                console.log(`🔄 Retrying overlay generation (${retryCount + 1}/${maxRetries})...`);
+                                this.setLoadingState(false);
+                                setTimeout(() => this.handleGeneration(retryCount + 1, maxRetries), 3000);
+                                return;
+                            }
+                            this.setLoadingState(false);
+                            this.showError('Failed to generate base image. Please try again.');
+                            return;
+                        }
+
+                        this.updateProgress('overlay', 70);
+                        await this.loadImageToCanvas(baseImageUrl);
+                        this.addGradientOverlays();
+                        this.renderTitleAndCredits(concept);
+                        
+                        const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
+                        this.currentOverlayPoster = finalImageUrl;
+                        this.currentAiTextPoster = null;
+                        this.elements.posterImage.src = finalImageUrl;
+                        this.showSingleView('overlay');
+                        console.log('✅ Professional overlay version generated');
                     }
 
-                    console.log('✅ Base image generated');
-
-                    // Step 3: Load image to canvas
-                    this.updateProgress('text', 55);
-                    await this.loadImageToCanvas(baseImageUrl);
-                    console.log('✅ Image loaded to canvas');
-
-                    // Step 4: Add overlays and text
-                    this.updateProgress('text', 75);
-                    this.addGradientOverlays();
-                    console.log('✅ Gradients applied');
-
-                    this.updateProgress('text', 85);
-                    this.renderTitleAndCredits(concept);
-                    console.log('✅ Title and credits rendered');
-
                     this.updateProgress('complete', 100);
-
-                    // Step 5: Display final poster
-                    const finalImageUrl = this.elements.canvas.toDataURL('image/png', 1.0);
-                    this.elements.posterImage.src = finalImageUrl;
-                    
-                    console.log('✅ Final poster URL created, length:', finalImageUrl.length);
-                    console.log('✅ Image src set to poster element');
 
                     // Update counters and history
                     this.generationCount++;
@@ -1777,8 +2079,19 @@
                         this.elements.generationCounter.textContent = `${this.generationCount} ${plural} created`;
                     }
 
+                    // NEW: Enhanced recent posters storage
                     if (!this.recentPosters) this.recentPosters = [];
-                    this.recentPosters.unshift({ imageUrl: finalImageUrl, concept, timestamp: Date.now() });
+                    const posterEntry = {
+                        concept,
+                        timestamp: Date.now(),
+                        textStyle: this.currentTextStyle,
+                        aiImageUrl: this.currentAiTextPoster,
+                        overlayImageUrl: this.currentOverlayPoster,
+                        // Keep backwards compatibility
+                        imageUrl: this.currentOverlayPoster || this.currentAiTextPoster
+                    };
+                    
+                    this.recentPosters.unshift(posterEntry);
                     if (this.recentPosters.length > 12) {
                         this.recentPosters = this.recentPosters.slice(0, 12);
                     }

@@ -1,6 +1,6 @@
-// api/generate-image.js - Enhanced with AI Text vs Overlay Support
+// api/generate-image.js - Using Gemini's Built-in Image Generation
 export default async function handler(req, res) {
-  console.log('💎 === GEMINI IMAGE GENERATION WITH TEXT CONTROL START ===');
+  console.log('💎 === GEMINI BUILT-IN IMAGE GENERATION START ===');
   
   // Enable CORS
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -18,12 +18,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'Gemini API key not configured' });
     }
 
-    const { visualElements = '', concept = {}, allowText = false } = req.body;
+    const { visualElements = '', concept = {} } = req.body;
     
-    console.log('🎯 Generation mode:', allowText ? 'AI Generated Text' : 'Professional Overlay Ready');
-    
-    // Create enhanced prompt based on text approach
-    function createGeminiImagePrompt(concept, visualElements, allowText) {
+    // Create enhanced prompt for Gemini's built-in image generation
+    function createGeminiImagePrompt(concept, visualElements) {
       const decade = concept.decade || '1980s';
       const genre = concept.genre || 'cinematic';
       
@@ -107,40 +105,7 @@ export default async function handler(req, res) {
       
       const randomCompositionHint = compositionVariety[Math.floor(Math.random() * compositionVariety.length)];
       
-      // NEW: Different text handling based on allowText parameter
-      let textInstructions = [];
-      if (allowText) {
-        // AI Generated Text Mode - Encourage natural movie poster text
-        textInstructions = [
-          `MOVIE TITLE TO INCLUDE: "${concept.title}"`,
-          `TAGLINE TO INCLUDE: "${concept.tagline || ''}"`,
-          'Include movie title prominently at the top of the poster in era-appropriate typography',
-          concept.tagline ? 'Include the tagline in smaller text below or above the title' : '',
-          'Use authentic movie poster text layout and typography for the era',
-          'Make text a natural integrated part of the poster design',
-          'Text should follow professional movie poster conventions',
-          `Typography should match ${decade} movie poster design standards`,
-          'Include billing block credits area at bottom (can be placeholder text)',
-          'Professional movie poster text hierarchy and placement'
-        ];
-        
-        console.log('🤖 AI Generated Text Mode: Encouraging natural title integration');
-      } else {
-        // Professional Overlay Mode - Prevent all text
-        textInstructions = [
-          'CRITICAL REQUIREMENT: Create pure visual artwork with absolutely no text, no words, no letters, no typography, no movie titles, no credits, no signatures anywhere in the image',
-          'Image ready for custom text overlay',
-          'No text elements of any kind',
-          'Pure visual composition without any written content',
-          'Artwork should be designed to accommodate text overlay later',
-          'Focus entirely on visual elements, characters, and atmosphere',
-          'Leave clear areas where text could be added later if needed'
-        ];
-        
-        console.log('🎨 Professional Overlay Mode: Preventing all text for canvas overlay');
-      }
-
-      // Build the complete prompt
+      // Very explicit about no text with enhanced style instructions
       const promptParts = [
         `Create a ${randomComposition} in authentic period style`,
         `${genre} film aesthetic specifically from the ${decade}`,
@@ -150,9 +115,9 @@ export default async function handler(req, res) {
         intensityLevel,
         visualElements,
         `COMPOSITION APPROACH: ${randomCompositionHint}`,
-        ...textInstructions.filter(Boolean), // Remove empty strings
         'Professional concept art illustration matching the exact artistic techniques and visual aesthetics used in movie posters from this specific time period',
         'Portrait orientation layout',
+        'CRITICAL REQUIREMENT: Create pure visual artwork with absolutely no text, no words, no letters, no typography, no movie titles, no credits, no signatures anywhere in the image',
         'The image should authentically capture the artistic medium, production techniques, and visual aesthetics exactly as movie posters were created during this specific decade',
         'Focus on period-accurate artistic style, medium, and production techniques with varied compositional approaches'
       ].filter(Boolean);
@@ -160,9 +125,8 @@ export default async function handler(req, res) {
       return promptParts.join('. ');
     }
 
-    const prompt = createGeminiImagePrompt(concept, visualElements, allowText);
+    const prompt = createGeminiImagePrompt(concept, visualElements);
     console.log('🎯 Gemini image prompt (length: ' + prompt.length + ')');
-    console.log('📝 Text mode:', allowText ? 'ALLOW TEXT' : 'PREVENT TEXT');
 
     // Use Gemini's generateContent with image generation request
     console.log('💎 Making Gemini generateContent call for image generation...');
@@ -186,7 +150,7 @@ export default async function handler(req, res) {
           }],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
-            temperature: allowText ? 0.8 : 0.7, // Slightly higher temperature for text generation
+            temperature: 0.7
           }
         }),
         signal: controller.signal
@@ -241,20 +205,13 @@ export default async function handler(req, res) {
     const imageUrl = `data:image/png;base64,${imageBase64}`;
     
     console.log('✅ Image generated successfully with Gemini built-in generation');
-    console.log('🔍 Image data length:', imageBase64.length);
-    console.log('🎯 Text mode used:', allowText ? 'AI Generated' : 'Overlay Ready');
+    console.log('📏 Image data length:', imageBase64.length);
     console.log('💎 === GEMINI IMAGE GENERATION SUCCESS ===');
 
     return res.status(200).json({ 
       success: true, 
       imageUrl,
-      generator: 'gemini-builtin-2.0',
-      textMode: allowText ? 'ai-generated' : 'overlay-ready',
-      concept: {
-        title: concept.title,
-        decade: concept.decade,
-        genre: concept.genre
-      }
+      generator: 'gemini-builtin-2.0'
     });
 
   } catch (error) {
