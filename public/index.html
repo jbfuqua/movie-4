@@ -1001,6 +1001,33 @@
 				ctx.restore();
 			}
 
+            renderBillingBlock(ctx, concept, w, h, zone, styling) {
+                const zoneY = h * zone.start;
+                const fontSize = Math.max(12, Math.floor(w / 60));
+                
+                ctx.save();
+                ctx.font = `400 ${Math.floor(fontSize * 0.9)}px ${styling.creditsFont}`;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                
+                // Professional billing block like real posters
+                const director = concept.director || this.generateDirector();
+                const lineHeight = fontSize * 1.3;
+                
+                // Line 1: A [Studio] Film
+                ctx.fillText('AN ABNORMAL STUDIOS FILM', w / 2, zoneY);
+                
+                // Line 2: Directed by
+                ctx.font = `700 ${fontSize}px ${styling.creditsFont}`;
+                ctx.fillText(`DIRECTED BY ${director.toUpperCase()}`, w / 2, zoneY + lineHeight);
+                
+                ctx.restore();
+            }
+
             renderTechnicalBlock(ctx, concept, w, h, zone, styling) {
                 const zoneY = h * zone.start;
                 const fontSize = Math.max(9, Math.floor(w / 85));
