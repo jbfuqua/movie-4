@@ -100,6 +100,18 @@
             input, select, textarea {
                 font-size: 16px;
             }
+			
+		    #poster-container {
+				aspect-ratio: 4 / 5 !important; /* Match canvas ratio for mobile too */
+			}
+    
+			#poster-image {
+				width: 100% !important;
+				height: 100% !important;
+				object-fit: contain !important;
+				object-position: center !important;
+			}
+			
         }
 		
 		@media (min-width: 769px) {
