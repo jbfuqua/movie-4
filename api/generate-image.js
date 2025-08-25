@@ -18,25 +18,35 @@ export default async function handler(req, res) {
       return res.status(500).json({ success: false, error: 'Gemini API key not configured' });
     }
 
-    const { visualElements = '', concept = {} } = req.body;
+    const { visualElements = '', concept = {}, artStyle = 'authentic' } = req.body;
     
     // Create enhanced prompt for Gemini's built-in image generation
-    function createGeminiImagePrompt(concept, visualElements) {
+    function createGeminiImagePrompt(concept, visualElements, artStyle) {
       const decade = concept.decade || '1980s';
       const genre = concept.genre || 'cinematic';
       
-      const styleMap = {
-        '1950s': 'vintage movie poster style, hand-painted artwork, warm color palette',
-        '1960s': 'retro 60s poster design, bold geometric shapes, pop art influence', 
-        '1970s': 'airbrushed 70s movie poster, soft gradients, earth tones',
-        '1980s': 'neon-lit 80s movie poster, dramatic shadows, vibrant colors',
-        '1990s': 'digital 90s movie poster, photorealistic details, modern style',
-        '2000s': 'polished digital artwork, clean composition',
-        '2010s': 'minimalist poster design, contemporary aesthetics',
-        '2020s': 'modern digital painting, atmospheric lighting'
+      // NEW: Highly detailed style map for more authentic results
+      const decadeStyleMap = {
+        '1950s': 'hand-painted lithograph print style, rich saturated Technicolor palette, dramatic pulp illustration, subtle film grain, inspired by Saul Bass',
+        '1960s': 'psychedelic art influence, bold and minimalist design, high-contrast graphics, pop-art aesthetic, vintage film poster feel', 
+        '1970s': 'gritty realism, heavy film grain, photorealistic airbrushed art, desaturated and earthy color palette, cinematic photography from the era',
+        '1980s': 'vibrant neon-noir aesthetic, airbrushed chrome and lens flares, dramatic high-contrast lighting, iconic 80s movie poster art by Drew Struzan',
+        '1990s': 'grunge aesthetic, high-contrast photography with a moody feel, early digital compositing look, often featuring floating heads or bold typography-free compositions',
+        '2000s': 'sleek digital look, bleach bypass color effect, high-contrast with cool blue and orange color grading, modern cinematic feel',
+        '2010s': 'clean, crisp digital photography, strong and moody color grading, minimalist and atmospheric composition, high-end cinematic poster',
+        '2020s': 'hyper-realistic digital painting, atmospheric and textured lighting, modern cinematic quality with impeccable detail, visually striking composition'
       };
 
-      const styleHint = styleMap[decade] || styleMap['1980s'];
+      // NEW: Art style modifier based on dropdown selection
+      const artStyleMap = {
+        'b-movie': 'exaggerated B-movie poster style, pulpy, lurid colors, intentionally dramatic and over-the-top',
+        'photo': 'hyper-realistic modern photographic style, shot on a high-end camera, sharp focus, cinematic lighting',
+        'painted': 'classic painted movie poster style, rich brushstrokes, visible canvas texture, artistic interpretation',
+        'authentic': '' // Let the decade style map handle it
+      };
+
+      const styleHint = decadeStyleMap[decade] || decadeStyleMap['1980s'];
+      const artStyleHint = artStyleMap[artStyle] || '';
       
       const intensityLevel = concept.nod_theme ? 
         'intense dramatic atmosphere, dark cinematic mood, edgy visual style' : 
@@ -47,6 +57,7 @@ export default async function handler(req, res) {
         'Generate a movie poster character portrait artwork',
         `${genre} film aesthetic from the ${decade}`,
         styleHint,
+        artStyleHint, // Add the specific art style instruction
         intensityLevel,
         visualElements,
         'Professional concept art illustration style',
@@ -59,7 +70,7 @@ export default async function handler(req, res) {
       return promptParts.join('. ');
     }
 
-    const prompt = createGeminiImagePrompt(concept, visualElements);
+    const prompt = createGeminiImagePrompt(concept, visualElements, artStyle);
     console.log('🎯 Gemini image prompt (length: ' + prompt.length + ')');
 
     // Use Gemini's generateContent with image generation request
@@ -70,8 +81,8 @@ export default async function handler(req, res) {
 
     let response;
     try {
-      // Use Gemini 2.0 Flash with image generation capability
-      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`, {
+      // Use Gemini 1.5 Flash (updated model)
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,9 +93,14 @@ export default async function handler(req, res) {
               text: prompt
             }]
           }],
+          // Using tools for more reliable image generation
+          "tools": [{
+            "image_generation": {
+                "sample_count": 1
+            }
+          }],
           generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            temperature: 0.7
+            temperature: 0.8
           }
         }),
         signal: controller.signal
@@ -114,12 +130,12 @@ export default async function handler(req, res) {
     const result = await response.json();
     console.log('✅ Gemini response parsed successfully');
     
-    // Look for image content in the response
+    // Look for image content in the response (updated for tool-based generation)
     let imageBase64;
     
-    if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts) {
+    if (result.candidates?.[0]?.content?.parts) {
       for (const part of result.candidates[0].content.parts) {
-        if (part.inlineData && part.inlineData.data) {
+        if (part.inlineData?.data) { // Standard inline data
           imageBase64 = part.inlineData.data;
           console.log('📦 Found image in inlineData format');
           break;
@@ -145,7 +161,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ 
       success: true, 
       imageUrl,
-      generator: 'gemini-builtin-2.0'
+      generator: 'gemini-1.5-flash'
     });
 
   } catch (error) {
