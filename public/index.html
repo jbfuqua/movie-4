@@ -1496,8 +1496,7 @@
                 const genreEmoji = emojis[concept.genre] || '🎬';
                 
                 let caption = '';
-                caption += `${genreEmoji} POSTER DROP: "${concept.title}" ${genreEmoji}\n\n`;
-                caption += `🎯 ${concept.decade} ${concept.genre} ${concept.nod_theme ? '• HARDCORE MODE' : ''}\n`;
+                caption += `🎯 ${concept.decade} ${concept.genre} \n`;
                 
                 // NEW: Add text style info to caption
                 const textStyleEmoji = {
@@ -1506,11 +1505,11 @@
                     'both-comparison': '⚖️'
                 };
                 
-                caption += `${textStyleEmoji[this.currentTextStyle] || '🎬'} Text Style: ${this.currentTextStyle.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
+//                caption += `${textStyleEmoji[this.currentTextStyle] || '🎬'} Text Style: ${this.currentTextStyle.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
                 caption += `💫 "${concept.tagline}"\n\n`;
                 
                 const synopsis = concept.synopsis ? 
-                    (concept.synopsis.length > 140 ? concept.synopsis.substring(0, 140) + '...' : concept.synopsis) :
+                    (concept.synopsis.length > 300 ? concept.synopsis.substring(0, 300) + '...' : concept.synopsis) :
                     'A cinematic journey that challenges perception and reality.';
                 caption += `📖 ${synopsis}\n\n`;
                 
@@ -1525,7 +1524,7 @@
                     caption += `🎥 Directed by: ${concept.director}\n`;
                 }
                 
-                caption += `\n🤖 Generated with AI • What style should I try next?\n\n`;
+//                caption += `\n🤖 Generated with AI • What style should I try next?\n\n`;
                 caption += this.generateProfessionalHashtags(concept);
 
                 this.elements.instagramCaption.value = caption;
