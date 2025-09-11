@@ -1,4 +1,4 @@
-// api/generate-concept.js - Updated with Hardcore Mode
+// api/generate-concept.js - Updated with Custom Plot Prompt Support
 import { getApiKeys } from './config.js';
 
 export default async function handler(req, res) {
@@ -43,10 +43,15 @@ export default async function handler(req, res) {
             requestBody = {};
         }
 
-        const { genreFilter = 'any', eraFilter = 'any', nodTheme = false } = requestBody;
+        // NEW: Include custom plot prompt
+        const { genreFilter = 'any', eraFilter = 'any', nodTheme = false, customPlotPrompt = '' } = requestBody;
         const safeNodTheme = !!nodTheme;
+        const safeCustomPlot = String(customPlotPrompt || '').trim();
 
-        console.log('📋 Request params:', { genreFilter, eraFilter, nodTheme: safeNodTheme });
+        console.log('📋 Request params:', { genreFilter, eraFilter, nodTheme: safeNodTheme, hasCustomPlot: !!safeCustomPlot });
+        if (safeCustomPlot) {
+            console.log('💭 Custom plot:', safeCustomPlot);
+        }
 
         // Genre mapping
         const genreMap = {
@@ -130,9 +135,14 @@ export default async function handler(req, res) {
             ]
         };
 
-        // UPDATED: Smart theme selection based on hardcore mode and genre
+        // UPDATED: Smart theme selection based on hardcore mode, genre, and custom plot
         let forceTheme;
-        if (safeNodTheme) {
+        
+        // NEW: If custom plot provided, use it instead of random theme
+        if (safeCustomPlot) {
+            forceTheme = safeCustomPlot;
+            console.log('🎯 Using custom plot prompt as theme');
+        } else if (safeNodTheme) {
             // Hardcore mode - select based on genre preference
             if (genreFilter === 'horror' && hardcoreThemes.horror) {
                 forceTheme = hardcoreThemes.horror[Math.floor(Math.random() * hardcoreThemes.horror.length)];
@@ -156,12 +166,25 @@ export default async function handler(req, res) {
         
         const seed = Date.now() % 100000;
 
-        console.log('🎯 Generation parameters:', { forceRandomDecade, forceTheme, seed, hardcoreMode: safeNodTheme });
+        console.log('🎯 Generation parameters:', { forceRandomDecade, forceTheme, seed, hardcoreMode: safeNodTheme, isCustomPlot: !!safeCustomPlot });
 
-        // Build the JSON-only prompt with hardcore mode support
+        // Build the JSON-only prompt with custom plot support
         const genreConstraint = genreFilter === 'any' 
             ? 'MUST be Horror or Sci-Fi (or fusion)' 
             : `MUST be ${genreMap[genreFilter]}`;
+
+        // NEW: Custom plot instructions
+        const customPlotInstructions = safeCustomPlot 
+            ? `
+            CUSTOM PLOT PROVIDED BY USER:
+            - Base the entire movie concept on this plot idea: "${safeCustomPlot}"
+            - Expand this concept into a full movie with title, tagline, and detailed synopsis
+            - Create a compelling movie that explores this core premise
+            - Make the title catchy and era-appropriate
+            - Develop the tagline to hook audiences
+            - Write a synopsis that builds on the user's idea with interesting details
+            ` 
+            : '';
 
         // UPDATED: Add hardcore mode instructions
         const hardcoreInstructions = safeNodTheme 
@@ -178,6 +201,7 @@ export default async function handler(req, res) {
 
         const prompt = `You are a film art director. Produce ONLY valid JSON. No prose.
 
+${customPlotInstructions}
 ${hardcoreInstructions}
 
 Constraints:
@@ -187,6 +211,7 @@ Constraints:
 - Avoid banned title words: Blood
 - Keep PG-13 implication (no graphic detail)
 - Add render_style: era-true medium ("hand-painted lithograph" | "silkscreen halftone" | "airbrushed illustration" | "painted montage" | "studio photo-composite" | "digital composite")
+${safeCustomPlot ? '- Build the entire concept around the user\'s plot idea while following all other constraints' : ''}
 
 Return JSON:
 {
@@ -213,13 +238,14 @@ Return JSON:
   },
   "render_style": "hand-painted lithograph",
   "nod_theme": ${JSON.stringify(safeNodTheme)},
+  "custom_plot_used": ${JSON.stringify(!!safeCustomPlot)},
   "seed": ${seed}
 }`;
 
         // If no Anthropic key, use fallback immediately
         if (!hasAnthropic) {
             console.log('⚠️ No Anthropic API key, using fallback');
-            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
+            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme, safeCustomPlot);
             return res.status(200).json({ success: true, concept: fallbackConcept });
         }
 
@@ -243,7 +269,7 @@ Return JSON:
             });
         } catch (fetchError) {
             console.error('❌ Anthropic fetch error:', fetchError);
-            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
+            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme, safeCustomPlot);
             return res.status(200).json({ success: true, concept: fallbackConcept });
         }
 
@@ -258,7 +284,7 @@ Return JSON:
             }
             console.error('❌ Anthropic API error:', response.status, errText);
             
-            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
+            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme, safeCustomPlot);
             return res.status(200).json({ success: true, concept: fallbackConcept });
         }
 
@@ -268,12 +294,12 @@ Return JSON:
             console.log('✅ Anthropic response parsed successfully');
         } catch (jsonError) {
             console.error('❌ Failed to parse Anthropic response:', jsonError);
-            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
+            const fallbackConcept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme, safeCustomPlot);
             return res.status(200).json({ success: true, concept: fallbackConcept });
         }
 
         const raw = result?.content?.[0]?.text || '';
-        console.log('📝 Raw Anthropic content length:', raw.length);
+        console.log('📄 Raw Anthropic content length:', raw.length);
 
         let concept = null;
         
@@ -296,14 +322,18 @@ Return JSON:
             }
         }
 
-        // Validate concept and ensure nod_theme is set
+        // Validate concept and ensure required fields are set
         if (!concept || !concept.title || !concept.visual_spec) {
             console.log('⚠️ Invalid concept, using fallback');
-            concept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme);
+            concept = buildFallbackConcept(forceRandomDecade, genreFilter, seed, safeNodTheme, safeCustomPlot);
         } else {
-            // UPDATED: Make sure nod_theme is properly set
+            // UPDATED: Make sure required fields are properly set
             concept.nod_theme = safeNodTheme;
-            console.log('✅ Valid concept generated:', concept.title, '| Hardcore Mode:', safeNodTheme);
+            concept.custom_plot_used = !!safeCustomPlot;
+            if (safeCustomPlot) {
+                concept.original_plot_prompt = safeCustomPlot;
+            }
+            console.log('✅ Valid concept generated:', concept.title, '| Hardcore Mode:', safeNodTheme, '| Custom Plot:', !!safeCustomPlot);
         }
 
         return res.status(200).json({ success: true, concept });
@@ -313,7 +343,7 @@ Return JSON:
         console.error('Stack trace:', err.stack);
         
         // Always return a successful fallback to prevent client-side errors
-        const fallbackConcept = buildFallbackConcept('1980s', 'sci-fi', Date.now() % 100000, false);
+        const fallbackConcept = buildFallbackConcept('1980s', 'sci-fi', Date.now() % 100000, false, '');
         return res.status(200).json({ 
             success: true, 
             concept: fallbackConcept,
@@ -325,11 +355,50 @@ Return JSON:
     }
 }
 
-// UPDATED: Enhanced fallback with hardcore mode support
-function buildFallbackConcept(decade, genreFilter, seed, nodTheme) {
-    console.log('🛡️ Building fallback concept | Hardcore Mode:', nodTheme);
+// UPDATED: Enhanced fallback with custom plot support
+function buildFallbackConcept(decade, genreFilter, seed, nodTheme, customPlot) {
+    console.log('🛡️ Building fallback concept | Hardcore Mode:', nodTheme, '| Custom Plot:', !!customPlot);
     
-    // Different titles based on hardcore mode
+    // NEW: Handle custom plot in fallback
+    if (customPlot) {
+        // Create a simple concept based on the custom plot
+        const customTitle = customPlot.length > 30 
+            ? customPlot.substring(0, 30).trim() + '...' 
+            : customPlot;
+        
+        return {
+            title: 'The ' + customTitle.split(' ').slice(0, 3).join(' '),
+            tagline: 'Some mysteries defy explanation.',
+            decade: decade || '1980s',
+            genre: genreFilter === 'any' ? 'Sci-Fi' : (genreFilter === 'horror' ? 'Horror' : genreFilter),
+            synopsis: customPlot + ' A gripping tale that challenges everything we thought we knew.',
+            visual_spec: {
+                subgenre: nodTheme ? 'hardcore-thriller' : 'retro-futurism',
+                palette: nodTheme ? ['#000000', '#8B0000', '#FF0000'] : ['#0a0a0a', '#4a90e2', '#ff6b35'],
+                camera: { 
+                    shot: 'medium close-up', 
+                    lens: '85mm', 
+                    depth_of_field: 'shallow focus' 
+                },
+                composition: 'centered portrait with dramatic lighting',
+                lighting: nodTheme ? 'harsh directional lighting with deep shadows' : 'dramatic rim lighting with color gels',
+                environment: 'atmospheric setting that supports the plot',
+                wardrobe_props: 'era-appropriate costume and tech props',
+                motifs: ['mystery', 'discovery', 'revelation'],
+                keywords: ['poster', 'no text', 'cinematic', 'professional'],
+                banned: ['gore', 'blood', 'weapons', 'graphic injury']
+            },
+            render_style: 'painted montage',
+            nod_theme: nodTheme,
+            custom_plot_used: true,
+            original_plot_prompt: customPlot,
+            seed: seed,
+            cast: ['Alex Chen', 'Maya Rodriguez', 'Dr. James Park', 'Sarah Mitchell'],
+            director: 'Cameron Wells'
+        };
+    }
+    
+    // Different titles based on hardcore mode (existing code)
     const normalTitles = [
         'The Quantum Mirror', 'Stellar Anomaly', 'Digital Phantoms', 'Temporal Breach',
         'Neural Interface', 'Cosmic Frequency', 'Memory Protocol', 'Reality Grid',
@@ -394,6 +463,7 @@ function buildFallbackConcept(decade, genreFilter, seed, nodTheme) {
         },
         render_style: 'painted montage',
         nod_theme: nodTheme,
+        custom_plot_used: false,
         seed: seed,
         cast: ['Alex Chen', 'Maya Rodriguez', 'Dr. James Park', 'Sarah Mitchell'],
         director: 'Cameron Wells'

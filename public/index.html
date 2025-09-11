@@ -244,6 +244,18 @@
                           </button>
                         </div>
 
+                        <!-- NEW: Custom Plot Prompt -->
+                        <div>
+                            <label class="text-sm font-medium text-gray-300 block mb-2">Custom Plot Prompt</label>
+                            <textarea 
+                                id="custom-plot-prompt" 
+                                class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm resize-none" 
+                                rows="3" 
+                                placeholder="Optional: Enter a one-line plot idea (e.g., 'A detective discovers their reflection is committing crimes') - leave blank for random generation"
+                            ></textarea>
+                            <p class="text-xs text-gray-500 mt-1">AI will expand your idea into a full movie concept with title, tagline, and synopsis</p>
+                        </div>
+
                         <!-- NEW: Text Style Selection -->
                         <div>
                             <label class="text-sm font-medium text-gray-300 block mb-2">Text Style</label>
@@ -325,6 +337,12 @@
                         <div class="border-l-4 border-red-500 pl-4">
                             <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Synopsis</label>
                             <p id="synopsis-text" class="text-sm text-gray-200 leading-relaxed">-</p>
+                        </div>
+
+                        <!-- NEW: Custom Plot Results -->
+                        <div id="custom-plot-results" class="border-l-4 border-orange-500 pl-4 hidden">
+                            <label class="font-bold text-xs text-gray-400 uppercase tracking-wide">Based on Your Plot</label>
+                            <p id="custom-plot-used" class="text-sm text-orange-300 italic">-</p>
                         </div>
 
                         <!-- NEW: Text Style Results -->
@@ -658,12 +676,18 @@
                 console.log("Generating movie concept...");
                 this.updateProgress('concept', 10);
                 
+                // NEW: Get custom plot prompt
+                const customPlotPrompt = document.getElementById('custom-plot-prompt')?.value?.trim() || '';
+                
                 const payload = {
                     genreFilter: this.elements.genreFilter.value,
                     eraFilter: this.elements.eraFilter.value,
                     nodTheme: this.nodTheme,
-                    preventText: this.currentTextStyle !== 'ai-generated' // Only prevent text if not using AI-generated
+                    preventText: this.currentTextStyle !== 'ai-generated', // Only prevent text if not using AI-generated
+                    customPlotPrompt: customPlotPrompt // NEW: Pass custom plot prompt
                 };
+
+                console.log("Custom plot prompt:", customPlotPrompt || "None provided");
 
                 try {
                     const response = await fetch(this.CONCEPT_API_URL, {
@@ -1452,6 +1476,9 @@
                 if (this.elements.taglineText) this.elements.taglineText.textContent = concept.tagline || '-';
                 if (this.elements.synopsisText) this.elements.synopsisText.textContent = concept.synopsis || '-';
                 
+                // NEW: Update custom plot results
+                this.updateCustomPlotResults(concept);
+                
                 // NEW: Update text style results
                 this.updateTextStyleResults();
                 
@@ -1459,6 +1486,21 @@
                 this.generateAISongRecommendation(concept);
                 
                 console.log('📋 Movie info updated');
+            }
+
+            // NEW: Update custom plot results UI
+            updateCustomPlotResults(concept) {
+                const customPlotElement = document.getElementById('custom-plot-results');
+                const customPlotUsedElement = document.getElementById('custom-plot-used');
+                
+                if (concept.custom_plot_used && concept.original_plot_prompt) {
+                    if (customPlotElement) customPlotElement.classList.remove('hidden');
+                    if (customPlotUsedElement) {
+                        customPlotUsedElement.textContent = `"${concept.original_plot_prompt}"`;
+                    }
+                } else {
+                    if (customPlotElement) customPlotElement.classList.add('hidden');
+                }
             }
 
             // NEW: Update text style results UI
