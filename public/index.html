@@ -188,6 +188,54 @@ function drawTracked(ctx, text, cx, y, size, trackFactor) {
     }
 }
 
+// Billing blocks are set in ultra-condensed type — that squeeze is a large part
+// of why they read as a billing block. Canvas has no condensed face available, so
+// we squeeze horizontally.
+const CONDENSE_HEADLINE = 0.88;
+const CONDENSE_FINE = 0.68;
+const MAX_BLOCK = 0.30; // of canvas height — the reserved foot of the poster
+
+// Draw tracked text horizontally squeezed. Coordinates inside the transform are
+// unsqueezed, so widths measure naturally and only the paint is condensed.
+function drawCondensed(ctx, text, cx, y, size, trackFactor, condense) {
+    ctx.save();
+    ctx.translate(cx, y);
+    ctx.scale(condense, 1);
+    setFont(ctx, size);
+    const natural = trackedWidth(ctx, text, size, trackFactor);
+    setFont(ctx, size);
+    const tracking = size * trackFactor;
+    let x = -natural / 2;
+    for (const c of [...text]) {
+        const cw = ctx.measureText(c).width;
+        ctx.fillText(c, x + cw / 2, 0);
+        x += cw + tracking;
+    }
+    ctx.restore();
+}
+
+function drawnWidth(ctx, text, size, trackFactor, condense) {
+    return trackedWidth(ctx, text, size, trackFactor) * condense;
+}
+
+// Greedy wrap for the fine-print crawl.
+function wrap(ctx, text, size, trackFactor, condense, maxWidth) {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+        const next = current ? `${current} ${word}` : word;
+        if (current && drawnWidth(ctx, next, size, trackFactor, condense) > maxWidth) {
+            lines.push(current);
+            current = word;
+        } else {
+            current = next;
+        }
+    }
+    if (current) lines.push(current);
+    return lines;
+}
+
 function compose(img, credits) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -200,48 +248,65 @@ function compose(img, credits) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
 
-    // Scale and tracking come from the concept's billing style, so a 1950s
-    // poster gets a few large, airy names and a 2010s one gets a block of fine
-    // print. Drawing the same block for every decade would be the same
-    // anachronism as using the same font for every decade.
-    const unit = (w / 100) * (credits.scale ?? 1);
     const maxWidth = w * SAFE_WIDTH;
+    const track = credits.tracking ?? 0.12;
 
-    const lines = [
-        credits.studio && { text: credits.studio, size: unit * 1.6, track: 0.22 },
-        credits.cast && { text: credits.cast, size: unit * 2.2, track: credits.tracking ?? 0.10 },
-        credits.director && { text: credits.director, size: unit * 1.6, track: 0.18 }
-    ].filter(Boolean);
+    // Lay the whole block out at a given scale, then shrink until it fits the
+    // reserved foot of the poster. Cheaper and more predictable than trying to
+    // solve for the size analytically.
+    let rows = [];
+    for (let fit = 1; fit >= 0.45; fit -= 0.05) {
+        const unit = (w / 100) * (credits.scale ?? 1) * fit;
+        rows = [];
 
-    // Shrink each line until what we will actually draw fits the safe width.
-    for (const line of lines) {
-        const floor = unit * 0.5;
-        while (line.size > floor && trackedWidth(ctx, line.text, line.size, line.track) > maxWidth) {
-            line.size -= 0.5;
+        for (const line of credits.headline || []) {
+            let size = unit * 2.1 * (line.weight ?? 1);
+            while (size > unit * 0.5 && drawnWidth(ctx, line.text, size, track, CONDENSE_HEADLINE) > maxWidth) {
+                size -= 0.5;
+            }
+            rows.push({ text: line.text, size, track, condense: CONDENSE_HEADLINE, lead: size * 1.5 });
         }
+
+        if (credits.fineprint) {
+            const size = unit * 1.05;
+            for (const text of wrap(ctx, credits.fineprint, size, 0.06, CONDENSE_FINE, maxWidth)) {
+                rows.push({ text, size, track: 0.06, condense: CONDENSE_FINE, lead: size * 1.45, dim: 0.82 });
+            }
+        }
+
+        if (credits.tail) {
+            const size = unit * 0.85;
+            for (const text of wrap(ctx, credits.tail, size, 0.06, CONDENSE_FINE, maxWidth)) {
+                rows.push({ text, size, track: 0.06, condense: CONDENSE_FINE, lead: size * 1.6, dim: 0.62 });
+            }
+        }
+
+        const height = rows.reduce((sum, r) => sum + r.lead, 0);
+        if (height <= h * MAX_BLOCK) break;
     }
 
-    // Lay the block out from the bottom edge upward, so it can never run off the
-    // poster no matter how many lines there are or how big the style is.
-    const gap = unit * 1.4;
+    if (!rows.length) return canvas.toDataURL('image/png');
+
+    // Stack upward from the bottom edge so the block can never run off.
     let baseline = h - h * BOTTOM_MARGIN;
-    for (let i = lines.length - 1; i >= 0; i--) {
-        lines[i].y = baseline;
-        baseline -= lines[i].size + gap;
+    for (let i = rows.length - 1; i >= 0; i--) {
+        rows[i].y = baseline;
+        baseline -= rows[i].lead;
     }
-    const blockTop = baseline + gap;
+    const blockTop = baseline + rows[0].lead - rows[0].size;
 
-    // Scrim only as tall as the block actually needs, so the artwork isn't dimmed.
-    const scrimTop = Math.max(0, blockTop - unit * 2.5);
+    // Scrim sized to the block, so it stops dimming artwork it isn't covering.
+    const scrimTop = Math.max(0, blockTop - h * 0.05);
     const scrim = ctx.createLinearGradient(0, scrimTop, 0, h);
     scrim.addColorStop(0, 'rgba(0,0,0,0)');
-    scrim.addColorStop(1, 'rgba(0,0,0,0.75)');
+    scrim.addColorStop(0.45, 'rgba(0,0,0,0.55)');
+    scrim.addColorStop(1, 'rgba(0,0,0,0.85)');
     ctx.fillStyle = scrim;
     ctx.fillRect(0, scrimTop, w, h - scrimTop);
 
-    ctx.fillStyle = 'rgba(255,255,255,0.94)';
-    for (const line of lines) {
-        drawTracked(ctx, line.text, w / 2, line.y, line.size, line.track);
+    for (const row of rows) {
+        ctx.fillStyle = `rgba(255,255,255,${row.dim ?? 0.94})`;
+        drawCondensed(ctx, row.text, w / 2, row.y, row.size, row.track, row.condense);
     }
 
     return canvas.toDataURL('image/png');
@@ -264,6 +329,44 @@ async function post(path, body) {
 
 const el = (id) => document.getElementById(id);
 const state = { busy: false, concept: null, poster: null, recent: [], timer: null };
+
+// The films this studio has already released.
+//
+// This used to live only in memory, so a page reload wiped it — and with no
+// temperature on the model, a blank history means it converges on its favourite
+// title every time. That is why "The Listening Room" kept coming back. Persisting
+// it is most of the fix for repetition.
+const HISTORY_KEY = 'abnormal.filmography';
+const HISTORY_MAX = 60;
+
+function loadHistory() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        return Array.isArray(raw) ? raw : [];
+    } catch {
+        return [];
+    }
+}
+
+function rememberFilm(concept) {
+    const films = loadHistory();
+    films.unshift({
+        title: concept.title,
+        decade: concept.decade,
+        // The premise matters as much as the title — repetition shows up as the
+        // same idea under a new name long before it shows up as the same name.
+        gist: (concept.synopsis || '').split(/[.!?]/)[0].trim()
+    });
+    try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(films.slice(0, HISTORY_MAX)));
+    } catch {
+        /* quota — not worth failing a generation over */
+    }
+}
+
+function avoidList() {
+    return loadHistory().map((f) => `"${f.title}" (${f.decade}) — ${f.gist}`);
+}
 
 function status(text) {
     el('loading-text').textContent = text;
@@ -371,9 +474,10 @@ async function generate() {
             era: el('era').value,
             plot: el('plot').value.trim(),
             intensity: el('intensity').checked ? 'hardcore' : 'normal',
-            avoidTitles: state.recent.map((r) => r.title)
+            avoidTitles: avoidList()
         });
         state.concept = concept;
+        rememberFilm(concept);
         renderDetails(concept);
 
         status('Painting the poster…');
@@ -479,7 +583,9 @@ function renderDetails(c) {
         row('Cast', (c.cast || []).join(', ')),
         row('Directed by', c.director),
         row('Studio', c.studio),
-        row('Medium', c.art_direction.medium)
+        row('Medium', c.art_direction.medium),
+        row('Print process', c.art_direction.reproduction || '—'),
+        row('Billing style', c.billing?.style || '—')
     ].join('');
 }
 
