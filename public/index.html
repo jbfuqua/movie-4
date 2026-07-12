@@ -157,6 +157,37 @@ const API = window.location.origin;
 // model renders reliably — and it's also the one piece where "correct spelling
 // in a boring font" is the entire requirement. So it's the one piece we draw.
 // ---------------------------------------------------------------------------
+const SAFE_WIDTH = 0.86;   // of canvas width
+const BOTTOM_MARGIN = 0.035; // of canvas height
+
+function setFont(ctx, size) {
+    ctx.font = `600 ${size}px 'Archivo Narrow', sans-serif`;
+}
+
+// Width of the string AS DRAWN — glyphs plus the letter-spacing between them.
+// Canvas has no letterSpacing we can rely on, so tracking is applied by hand in
+// drawTracked, and it MUST be included here: measuring the untracked width and
+// then drawing a tracked string is what pushed the credits off the poster.
+function trackedWidth(ctx, text, size, trackFactor) {
+    setFont(ctx, size);
+    const chars = [...text];
+    const glyphs = chars.reduce((sum, c) => sum + ctx.measureText(c).width, 0);
+    return glyphs + size * trackFactor * Math.max(0, chars.length - 1);
+}
+
+function drawTracked(ctx, text, cx, y, size, trackFactor) {
+    setFont(ctx, size);
+    const chars = [...text];
+    const tracking = size * trackFactor;
+    let x = cx - trackedWidth(ctx, text, size, trackFactor) / 2;
+    setFont(ctx, size); // trackedWidth reset the font
+    for (const c of chars) {
+        const cw = ctx.measureText(c).width;
+        ctx.fillText(c, x + cw / 2, y);
+        x += cw + tracking;
+    }
+}
+
 function compose(img, credits) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
@@ -166,54 +197,54 @@ function compose(img, credits) {
 
     ctx.drawImage(img, 0, 0, w, h);
 
-    // Scrim only under the credits, so the artwork isn't dimmed.
-    const scrim = ctx.createLinearGradient(0, h * 0.80, 0, h);
-    scrim.addColorStop(0, 'rgba(0,0,0,0)');
-    scrim.addColorStop(1, 'rgba(0,0,0,0.72)');
-    ctx.fillStyle = scrim;
-    ctx.fillRect(0, h * 0.80, w, h * 0.20);
-
     ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.textBaseline = 'alphabetic';
 
     // Scale and tracking come from the concept's billing style, so a 1950s
     // poster gets a few large, airy names and a 2010s one gets a block of fine
     // print. Drawing the same block for every decade would be the same
     // anachronism as using the same font for every decade.
     const unit = (w / 100) * (credits.scale ?? 1);
-    const present = [
-        credits.studio && { text: credits.studio, size: unit * 1.9, tracking: 0.22 },
-        credits.cast && { text: credits.cast, size: unit * 2.5, tracking: credits.tracking ?? 0.10 },
-        credits.director && { text: credits.director, size: unit * 1.9, tracking: 0.18 }
+    const maxWidth = w * SAFE_WIDTH;
+
+    const lines = [
+        credits.studio && { text: credits.studio, size: unit * 1.6, track: 0.22 },
+        credits.cast && { text: credits.cast, size: unit * 2.2, track: credits.tracking ?? 0.10 },
+        credits.director && { text: credits.director, size: unit * 1.6, track: 0.18 }
     ].filter(Boolean);
 
-    // Centre the block in the lower band regardless of how many lines it has.
-    const lead = unit * 3.8;
-    const top = h * 0.945 - ((present.length - 1) * lead) / 2;
-
-    present.forEach((line, i) => {
-        let size = line.size;
-        ctx.font = `600 ${size}px 'Archivo Narrow', sans-serif`;
-        // Condense until it fits, the way a real billing block does.
-        while (ctx.measureText(line.text).width > w * 0.86 && size > unit * 0.6) {
-            size -= 0.5;
-            ctx.font = `600 ${size}px 'Archivo Narrow', sans-serif`;
+    // Shrink each line until what we will actually draw fits the safe width.
+    for (const line of lines) {
+        const floor = unit * 0.5;
+        while (line.size > floor && trackedWidth(ctx, line.text, line.size, line.track) > maxWidth) {
+            line.size -= 0.5;
         }
-        drawTracked(ctx, line.text, w / 2, top + i * lead, size * line.tracking);
-    });
+    }
+
+    // Lay the block out from the bottom edge upward, so it can never run off the
+    // poster no matter how many lines there are or how big the style is.
+    const gap = unit * 1.4;
+    let baseline = h - h * BOTTOM_MARGIN;
+    for (let i = lines.length - 1; i >= 0; i--) {
+        lines[i].y = baseline;
+        baseline -= lines[i].size + gap;
+    }
+    const blockTop = baseline + gap;
+
+    // Scrim only as tall as the block actually needs, so the artwork isn't dimmed.
+    const scrimTop = Math.max(0, blockTop - unit * 2.5);
+    const scrim = ctx.createLinearGradient(0, scrimTop, 0, h);
+    scrim.addColorStop(0, 'rgba(0,0,0,0)');
+    scrim.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = scrim;
+    ctx.fillRect(0, scrimTop, w, h - scrimTop);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
+    for (const line of lines) {
+        drawTracked(ctx, line.text, w / 2, line.y, line.size, line.track);
+    }
 
     return canvas.toDataURL('image/png');
-}
-
-// Canvas has no letter-spacing, and billing blocks live on tracking.
-function drawTracked(ctx, text, cx, y, tracking) {
-    const chars = [...text];
-    const width = chars.reduce((sum, c) => sum + ctx.measureText(c).width + tracking, 0) - tracking;
-    let x = cx - width / 2;
-    for (const c of chars) {
-        ctx.fillText(c, x + ctx.measureText(c).width / 2, y);
-        x += ctx.measureText(c).width + tracking;
-    }
 }
 
 // ---------------------------------------------------------------------------
