@@ -6,9 +6,9 @@
 // This endpoint must never throw. Its whole job is to explain a broken config,
 // so a misconfiguration has to come back as a readable 200, not a 500.
 
-import { handler } from './lib/http.js';
-import { availableProviders, defaultProvider } from './lib/image/index.js';
-import { CLAUDE_MODEL } from './lib/models.js';
+import { handler } from '../lib/http.js';
+import { availableProviders, defaultProvider } from '../lib/image/index.js';
+import { CLAUDE_MODEL } from '../lib/models.js';
 
 export default handler('GET', async () => {
     const providers = availableProviders();

@@ -1,6 +1,6 @@
-import { handler } from './lib/http.js';
-import { generateImage } from './lib/image/index.js';
-import { imagePrompt } from './lib/concept.js';
+import { handler } from '../lib/http.js';
+import { generateImage } from '../lib/image/index.js';
+import { imagePrompt } from '../lib/concept.js';
 
 export default handler('POST', async (body) => {
     const { concept, provider, referenceImages = [] } = body;

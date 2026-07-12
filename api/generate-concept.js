@@ -1,6 +1,6 @@
-import { handler } from './lib/http.js';
-import { structured } from './lib/claude.js';
-import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock } from './lib/concept.js';
+import { handler } from '../lib/http.js';
+import { structured } from '../lib/claude.js';
+import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock } from '../lib/concept.js';
 
 export default handler('POST', async (body) => {
     const {

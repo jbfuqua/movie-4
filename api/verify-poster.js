@@ -4,8 +4,8 @@
 // string that was supposed to be rendered, so "did it work?" is a decidable
 // question instead of a vibe.
 
-import { handler } from './lib/http.js';
-import { structured, imageBlock } from './lib/claude.js';
+import { handler } from '../lib/http.js';
+import { structured, imageBlock } from '../lib/claude.js';
 
 const VERDICT_SCHEMA = {
     type: 'object',

@@ -1,5 +1,5 @@
-import { handler } from './lib/http.js';
-import { structured } from './lib/claude.js';
+import { handler } from '../lib/http.js';
+import { structured } from '../lib/claude.js';
 
 const SONG_SCHEMA = {
     type: 'object',
