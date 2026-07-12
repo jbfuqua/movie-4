@@ -3,7 +3,7 @@ import { generateImage } from '../lib/image/index.js';
 import { imagePrompt } from '../lib/concept.js';
 
 export default handler('POST', async (body) => {
-    const { concept, provider, quality, referenceImages = [] } = body;
+    const { concept, provider, quality, creditsMode = 'model', referenceImages = [] } = body;
 
     if (!concept?.title || !concept?.art_direction || !concept?.title_treatment) {
         const error = new Error('A full concept (title, art_direction, title_treatment) is required');
@@ -13,7 +13,7 @@ export default handler('POST', async (body) => {
 
     // Rebuild the prompt server-side rather than trusting one from the client —
     // it's deterministic from the concept anyway.
-    const prompt = imagePrompt(concept);
+    const prompt = imagePrompt(concept, { creditsMode });
 
     const image = await generateImage({ provider, prompt, referenceImages, quality });
 
@@ -23,6 +23,7 @@ export default handler('POST', async (body) => {
         model: image.model,
         size: image.size,
         quality: image.quality ?? null,
+        creditsMode,
         prompt
     };
 });

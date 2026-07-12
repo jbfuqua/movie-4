@@ -72,6 +72,15 @@
                         <p id="provider-note" class="text-xs text-gray-600 mt-1.5"></p>
                     </div>
 
+                    <div>
+                        <label for="credits-mode">Credits</label>
+                        <select id="credits-mode">
+                            <option value="model">Printed by the image model</option>
+                            <option value="canvas">Composited (guaranteed spelling)</option>
+                        </select>
+                        <p class="text-xs text-gray-600 mt-1.5">Printed credits share the poster's ink, halftone and fade. Composited credits always spell correctly but sit on top of the object.</p>
+                    </div>
+
                     <div id="quality-row" class="hidden">
                         <label for="quality">Quality</label>
                         <select id="quality"></select>
@@ -484,11 +493,18 @@ async function generate() {
         const image = await post('generate-image', {
             concept,
             provider: el('provider').value,
-            quality: el('quality').value || undefined
+            quality: el('quality').value || undefined,
+            creditsMode: el('credits-mode').value
         });
 
-        status('Setting the credits…');
-        const composed = await composeAsync(image.imageUrl, credits);
+        // In 'model' mode the poster already HAS its billing block, printed into
+        // the same ink as everything else. Compositing a second one over it is
+        // what produced the doubled credits.
+        let composed = image.imageUrl;
+        if (image.creditsMode === 'canvas') {
+            status('Setting the credits…');
+            composed = await composeAsync(image.imageUrl, credits);
+        }
         state.poster = composed;
         el('poster').src = composed;
         el('poster').classList.remove('hidden');
@@ -546,6 +562,17 @@ async function verify(imageUrl, concept, image) {
             }
             if (verdict.stray_text) badges.push('<span class="badge badge-warn">Stray text</span>');
             if (!verdict.legible) badges.push('<span class="badge badge-warn">Title not legible</span>');
+        }
+
+        // Only meaningful when the model drew the block itself.
+        if (image.creditsMode === 'model') {
+            badges.push(
+                !verdict.credits_present
+                    ? '<span class="badge badge-warn">No billing block printed</span>'
+                    : verdict.credits_legible
+                        ? '<span class="badge badge-ok">Billing block is real text</span>'
+                        : '<span class="badge badge-warn">Billing block is pseudo-text</span>'
+            );
         }
 
         el('verdict').innerHTML = badges.join(' ') +

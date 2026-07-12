@@ -10,7 +10,7 @@ import { structured, imageBlock } from '../lib/claude.js';
 const VERDICT_SCHEMA = {
     type: 'object',
     additionalProperties: false,
-    required: ['title_as_rendered', 'title_correct', 'legible', 'stray_text', 'issues'],
+    required: ['title_as_rendered', 'title_correct', 'legible', 'stray_text', 'credits_present', 'credits_legible', 'issues'],
     properties: {
         title_as_rendered: {
             type: 'string',
@@ -26,7 +26,15 @@ const VERDICT_SCHEMA = {
         },
         stray_text: {
             type: 'boolean',
-            description: 'True if there is any text in the image beyond the title and tagline — invented credits, garbled small print, logos, watermarks.'
+            description: 'True if there is text the poster should not have: logos, watermarks, rating boxes, barcodes, dates, web addresses, or a SECOND set of credits.'
+        },
+        credits_present: {
+            type: 'boolean',
+            description: 'True if a billing block / credits block is visible at the foot of the poster.'
+        },
+        credits_legible: {
+            type: 'boolean',
+            description: 'Judge the billing block strictly. True only if its small print resolves into real, correctly-spelled words. False if it is decorative pseudo-text that merely LOOKS like type — which is the usual failure. If there is no billing block at all, false.'
         },
         issues: {
             type: 'array',
@@ -66,7 +74,9 @@ export default handler('POST', async (body) => {
                     `The title was supposed to read exactly: "${expectedTitle}"`,
                     expectedTagline ? `The tagline was supposed to read exactly: "${expectedTagline}"` : '',
                     '',
-                    'Transcribe the title as it actually appears — do not correct it, do not read what you expect to see. If a letter is wrong, doubled, or missing, report it as it is. Judge the artwork not at all; only the text.'
+                    'Transcribe the title as it actually appears — do not correct it, do not read what you expect to see. If a letter is wrong, doubled, or missing, report it as it is. Judge the artwork not at all; only the text.',
+                    '',
+                    'Then look at the billing block at the foot of the poster, if there is one. Zoom in on it mentally. Does the small print resolve into real words, or is it decorative squiggle that only resembles type at a glance? Be strict — pseudo-text is the normal outcome and you should say so when you see it.'
                 ].filter(Boolean).join('\n')
             }
         ]
