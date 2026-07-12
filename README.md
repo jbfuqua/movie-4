@@ -51,16 +51,18 @@ the UI to compare them on the same concept.
 
 Both sit behind one interface (`api/lib/image/`), so they're interchangeable.
 
-| | `gpt-image-2` | `gemini-3.1-flash-image` |
+| | `gemini-3.1-flash-image` (default) | `gpt-image-2` |
 |---|---|---|
-| In-image text | Best available — #1 on both blind-vote leaderboards | Good; weaker on small type |
-| Repair a bad title | Yes — mask-based `/images/edits` | No; requires a re-render |
-| Reference images | Yes | Up to 14, character consistency across 4 faces |
-| Cost per poster | ~$0.165 (1024×1536, high) | ~$0.101 (2K, 2:3) |
+| Poster output | **Better in practice** — this is the one to use | Rated higher on general leaderboards, but not on these posters |
+| Fits a 60s function | Yes, at full 2K | Only at `medium` quality; `high` times out |
+| Repair a bad title | No; requires a re-render | Yes — mask-based `/images/edits` |
+| Reference images | Up to 14, character consistency across 4 faces | Yes |
+| Cost per poster | ~$0.101 (2K, 2:3) | ~$0.041 medium / ~$0.165 high |
 
-Neither is a clear winner on *poster* text specifically — the leaderboards measure
-general preference, and no published benchmark isolates in-image text accuracy.
-That's exactly why both are wired up: judge them on your own posters.
+Gemini is the default. The leaderboards favour `gpt-image-2`, but they measure
+general preference and no published benchmark isolates in-image text accuracy —
+and on actual posters from this pipeline, Gemini wins. Which is the entire reason
+both are wired up: judge them on your own output, not on a leaderboard.
 
 ## Models
 
