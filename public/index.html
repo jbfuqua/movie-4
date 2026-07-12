@@ -72,6 +72,12 @@
                         <p id="provider-note" class="text-xs text-gray-600 mt-1.5"></p>
                     </div>
 
+                    <div id="quality-row" class="hidden">
+                        <label for="quality">Quality</label>
+                        <select id="quality"></select>
+                        <p id="quality-note" class="text-xs text-gray-600 mt-1.5"></p>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label for="genre">Genre</label>
@@ -271,13 +277,49 @@ async function loadHealth() {
     }
 }
 
+// gpt-image-2's per-image price, which swings 4x with quality. Gemini has no
+// quality knob, so its row stays hidden.
+const QUALITY_COST = { low: 0.005, medium: 0.041, high: 0.165 };
+
 function describeProvider(providers) {
     const p = providers.find((x) => x.id === el('provider').value);
     if (!p) return;
+
     const bits = [`~$${p.approxCostUsd.toFixed(3)} per poster`];
     if (p.supportsMaskEdit) bits.push('can repair a bad title in place');
     if (p.supportsReferenceImages) bits.push('takes reference images');
     el('provider-note').textContent = bits.join(' · ');
+
+    const row = el('quality-row');
+    const select = el('quality');
+
+    if (!p.qualities) {
+        row.classList.add('hidden');
+        select.innerHTML = '';
+        return;
+    }
+
+    row.classList.remove('hidden');
+    select.innerHTML = '';
+    for (const q of p.qualities) {
+        const opt = document.createElement('option');
+        opt.value = q;
+        opt.textContent = q === 'high'
+            ? 'high — will time out on Hobby'
+            : `${q} — ~$${QUALITY_COST[q].toFixed(3)}`;
+        opt.selected = q === p.defaultQuality;
+        select.appendChild(opt);
+    }
+    describeQuality();
+    select.onchange = describeQuality;
+}
+
+function describeQuality() {
+    // Serverless functions are capped at 60s. gpt-image-2 at high quality does
+    // not finish inside that, which is what the 504 was.
+    el('quality-note').textContent = el('quality').value === 'high'
+        ? 'High quality exceeds the 60s function limit and will fail. Needs a longer timeout than Hobby allows.'
+        : 'Medium is the best quality that returns inside the 60s function limit.';
 }
 
 async function generate() {
@@ -306,7 +348,8 @@ async function generate() {
         status('Painting the poster…');
         const image = await post('generate-image', {
             concept,
-            provider: el('provider').value
+            provider: el('provider').value,
+            quality: el('quality').value || undefined
         });
 
         status('Setting the credits…');
