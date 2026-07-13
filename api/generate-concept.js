@@ -1,5 +1,5 @@
 import { handler } from '../lib/http.js';
-import { structured } from '../lib/claude.js';
+import { structured, defaultTextProvider } from '../lib/text/index.js';
 import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock } from '../lib/concept.js';
 import { checkCopy } from '../lib/copy-check.js';
 
@@ -28,7 +28,10 @@ export default handler('POST', async (body) => {
         era = 'any',
         plot = '',
         intensity = 'normal',
-        avoidTitles = []
+        avoidTitles = [],
+        // Which writer. Undefined falls through to TEXT_PROVIDER, then to
+        // whichever provider has a key.
+        textProvider
     } = body;
 
     // Opus 4.8 takes no temperature, so variety has to come from the prompt.
@@ -36,6 +39,10 @@ export default handler('POST', async (body) => {
     // hardcoded lottery of 110 pre-written themes — because it steers away from
     // what this user actually just generated, not from a fixed list.
     const seed = Math.floor(Math.random() * 1_000_000);
+
+    // Resolved once, so the copy-fix retry cannot land on a different writer
+    // than the one that wrote the film, and so the response can report it.
+    const writer = textProvider || defaultTextProvider();
 
     const brief = conceptPrompt({
         genre,
@@ -52,6 +59,7 @@ export default handler('POST', async (body) => {
     // low because the scratch space is what matters here, not the depth of it,
     // and this has to fit in a 60s function.
     const concept = await structured({
+        provider: writer,
         prompt: brief,
         schema: CONCEPT_SCHEMA,
         maxTokens: 6000,
@@ -71,6 +79,7 @@ export default handler('POST', async (body) => {
 
         if (remaining > COPY_FIX_BUDGET_MS) {
             const fixed = await structured({
+                provider: writer,
                 schema: COPY_SCHEMA,
                 maxTokens: 2000,
                 think: true,
@@ -105,6 +114,7 @@ export default handler('POST', async (body) => {
     return {
         concept,
         seed,
+        writer,
         copyRejected,
         elapsedMs: Date.now() - started,
         // Precomputed so the client never has to reassemble either of these.

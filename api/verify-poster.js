@@ -5,7 +5,9 @@
 // question instead of a vibe.
 
 import { handler } from '../lib/http.js';
-import { structured, imageBlock } from '../lib/claude.js';
+// Proofreading is a vision call, so it stays on Claude no matter which writer
+// generated the film.
+import { structured, imageBlock } from '../lib/text/claude.js';
 
 const VERDICT_SCHEMA = {
     type: 'object',

@@ -68,6 +68,12 @@
                     <h2 class="font-semibold">Controls</h2>
 
                     <div>
+                        <label for="writer">Writer</label>
+                        <select id="writer"></select>
+                        <p id="writer-note" class="text-xs text-gray-600 mt-1.5"></p>
+                    </div>
+
+                    <div>
                         <label for="provider">Image Model</label>
                         <select id="provider"></select>
                         <p id="provider-note" class="text-xs text-gray-600 mt-1.5"></p>
@@ -395,7 +401,7 @@ async function post(path, body) {
 }
 
 const el = (id) => document.getElementById(id);
-const state = { busy: false, concept: null, poster: null, recent: [], timer: null };
+const state = { busy: false, concept: null, poster: null, recent: [], timer: null, canProofread: true };
 
 // The films this studio has already released.
 //
@@ -444,33 +450,56 @@ function showError(message) {
     el('error').classList.remove('hidden');
 }
 
+// Both selectors fill the same way: list every provider, disable the ones with
+// no key, preselect the server's default.
+function fillProviders(select, providers, chosen) {
+    select.innerHTML = '';
+    for (const p of providers) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.configured ? p.label : `${p.label} — no API key`;
+        opt.disabled = !p.configured;
+        opt.selected = p.id === chosen && p.configured;
+        select.appendChild(opt);
+    }
+    if (!select.value) {
+        const first = providers.find((p) => p.configured);
+        if (first) select.value = first.id;
+    }
+}
+
 async function loadHealth() {
     try {
         const res = await fetch(`${API}/api/health`);
         const data = await res.json();
 
         const select = el('provider');
-        select.innerHTML = '';
-        for (const p of data.image.providers) {
-            const opt = document.createElement('option');
-            opt.value = p.id;
-            opt.textContent = p.configured ? p.label : `${p.label} — no API key`;
-            opt.disabled = !p.configured;
-            opt.selected = p.id === data.image.default && p.configured;
-            select.appendChild(opt);
-        }
-        if (!select.value) {
-            const first = data.image.providers.find((p) => p.configured);
-            if (first) select.value = first.id;
-        }
+        fillProviders(select, data.image.providers, data.image.default);
         describeProvider(data.image.providers);
         select.onchange = () => describeProvider(data.image.providers);
+
+        const writer = el('writer');
+        fillProviders(writer, data.text.providers, data.text.default);
+        const describeWriter = () => {
+            const spec = data.text.providers.find((w) => w.id === writer.value);
+            el('writer-note').textContent = spec?.note || '';
+        };
+        describeWriter();
+        writer.onchange = describeWriter;
+
+        // Proofreading is a Claude vision call. Without an Anthropic key the
+        // poster still generates — it just doesn't get checked.
+        state.canProofread = data.text.canProofread;
 
         if (data.status !== 'ok') {
             el('health').innerHTML = `<span class="badge badge-warn">Missing: ${data.missing.join(', ')}</span>`;
             el('generate').disabled = true;
         } else {
-            el('health').innerHTML = `<span class="badge badge-ok">Ready · ${data.text.model}</span>`;
+            const badges = [`<span class="badge badge-ok">Ready</span>`];
+            if (!data.text.canProofread) {
+                badges.push('<span class="badge badge-warn">No proofreading — ANTHROPIC_API_KEY not set</span>');
+            }
+            el('health').innerHTML = badges.join(' ');
         }
     } catch {
         el('health').innerHTML = '<span class="badge badge-warn">Backend unreachable</span>';
@@ -542,7 +571,8 @@ async function generate() {
             era: el('era').value,
             plot: el('plot').value.trim(),
             intensity: el('intensity').checked ? 'hardcore' : 'normal',
-            avoidTitles: avoidList()
+            avoidTitles: avoidList(),
+            textProvider: el('writer').value
         });
         state.concept = concept;
         state.copyRejected = copyRejected;
@@ -577,7 +607,7 @@ async function generate() {
         renderCaption(concept);
 
         // Fire-and-forget: neither of these should block the poster appearing.
-        verify(image.imageUrl, concept, image);
+        if (state.canProofread) verify(image.imageUrl, concept, image);
         loadSong(concept);
     } catch (error) {
         el('loader').classList.add('hidden');

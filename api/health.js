@@ -8,12 +8,14 @@
 
 import { handler } from '../lib/http.js';
 import { availableProviders, defaultProvider } from '../lib/image/index.js';
-import { CLAUDE_MODEL } from '../lib/models.js';
+import { availableTextProviders, defaultTextProvider } from '../lib/text/index.js';
 
 export default handler('GET', async () => {
     const providers = availableProviders();
-    const anthropic = Boolean(process.env.ANTHROPIC_API_KEY);
+    const writers = availableTextProviders();
+
     const anyImage = providers.some((p) => p.configured);
+    const anyWriter = writers.some((w) => w.configured);
 
     let selected = null;
     let providerError = null;
@@ -24,15 +26,34 @@ export default handler('GET', async () => {
         providerError = error.message;
     }
 
+    let writer = null;
+    let writerError = null;
+    try {
+        writer = defaultTextProvider();
+    } catch (error) {
+        // Bad TEXT_PROVIDER pin, or no text key at all.
+        writerError = error.message;
+    }
+
     const missing = [
-        !anthropic && 'ANTHROPIC_API_KEY',
-        !anyImage && 'an image provider key (OPENAI_API_KEY or GEMINI_API_KEY)'
+        !anyWriter && 'a writer key (ANTHROPIC_API_KEY or OPENAI_API_KEY)',
+        !anyImage && 'an image provider key (OPENAI_API_KEY or GEMINI_API_KEY)',
+        // Proofreading is Claude-only, so this degrades the poster without
+        // blocking it. Called out separately rather than folded into the above.
+        anyWriter && !process.env.ANTHROPIC_API_KEY && 'ANTHROPIC_API_KEY (proofreading is disabled without it)'
     ].filter(Boolean);
 
     return {
-        status: anthropic && selected ? 'ok' : 'degraded',
+        status: writer && selected ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
-        text: { model: CLAUDE_MODEL, configured: anthropic },
+        text: {
+            providers: writers,
+            default: writer,
+            pinned: process.env.TEXT_PROVIDER || null,
+            error: writerError,
+            // Proofreading needs Claude's vision, whoever writes the film.
+            canProofread: Boolean(process.env.ANTHROPIC_API_KEY)
+        },
         image: {
             providers,
             default: selected,
