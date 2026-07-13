@@ -531,7 +531,7 @@ async function generate() {
 
     try {
         status('Writing the film…');
-        const { concept, credits } = await post('generate-concept', {
+        const { concept, credits, copyRejected } = await post('generate-concept', {
             genre: el('genre').value,
             era: el('era').value,
             plot: el('plot').value.trim(),
@@ -539,6 +539,7 @@ async function generate() {
             avoidTitles: avoidList()
         });
         state.concept = concept;
+        state.copyRejected = copyRejected;
         rememberFilm(concept);
         renderDetails(concept);
 
@@ -607,6 +608,11 @@ async function verify(imageUrl, concept, image) {
 
         const clean = verdict.title_correct && verdict.legible && !verdict.stray_text;
         const badges = [`<span class="badge badge-info">${image.model}</span>`];
+        // The copy guard fired and there was no time left to rewrite. Say so,
+        // rather than quietly shipping the title it just rejected.
+        if (state.copyRejected) {
+            badges.push('<span class="badge badge-warn">Copy guard rejected the title/tagline but could not rewrite in time</span>');
+        }
 
         if (clean) {
             badges.push('<span class="badge badge-ok">Title renders correctly</span>');

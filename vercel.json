@@ -1,12 +1,26 @@
 {
   "functions": {
-    "api/generate-concept.js": { "maxDuration": 60 },
-    "api/generate-image.js": { "maxDuration": 60 },
-    "api/verify-poster.js": { "maxDuration": 60 },
-    "api/generate-song.js": { "maxDuration": 30 }
+    "api/generate-concept.js": {
+      "maxDuration": 60
+    },
+    "api/generate-image.js": {
+      "maxDuration": 60
+    },
+    "api/verify-poster.js": {
+      "maxDuration": 60
+    },
+    "api/generate-song.js": {
+      "maxDuration": 60
+    }
   },
   "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
   ]
 }
