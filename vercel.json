@@ -11,6 +11,9 @@
     },
     "api/generate-song.js": {
       "maxDuration": 60
+    },
+    "api/warm-writer.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

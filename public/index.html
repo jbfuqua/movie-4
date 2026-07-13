@@ -450,6 +450,23 @@ function showError(message) {
     el('error').classList.remove('hidden');
 }
 
+// OpenAI compiles the concept schema into a grammar the first time it sees it —
+// up to a minute for a schema this size, then cached for 24h. Inside a generate
+// call that is a 504; fired here, while the user is still picking a genre, it
+// costs them nothing. Advisory and best-effort: failures are swallowed, because
+// the only consequence is that the next generate pays full price.
+const warmed = new Set();
+
+function warmWriter(provider) {
+    if (warmed.has(provider)) return;
+    warmed.add(provider);
+    fetch(`${API}/api/warm-writer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ textProvider: provider })
+    }).catch(() => warmed.delete(provider));
+}
+
 // Both selectors fill the same way: list every provider, disable the ones with
 // no key, preselect the server's default.
 function fillProviders(select, providers, chosen) {
@@ -483,6 +500,7 @@ async function loadHealth() {
         const describeWriter = () => {
             const spec = data.text.providers.find((w) => w.id === writer.value);
             el('writer-note').textContent = spec?.note || '';
+            if (spec?.needsWarm) warmWriter(spec.id);
         };
         describeWriter();
         writer.onchange = describeWriter;
