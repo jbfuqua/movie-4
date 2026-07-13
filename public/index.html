@@ -121,10 +121,16 @@
                         <textarea id="plot" rows="2" placeholder="A lighthouse keeper starts receiving his own distress calls…"></textarea>
                     </div>
 
-                    <label class="flex items-center gap-2 cursor-pointer !normal-case !tracking-normal !text-sm !text-gray-300 !mb-0">
-                        <input type="checkbox" id="intensity" class="!w-4 !h-4 accent-indigo-500">
-                        Darker tone
-                    </label>
+                    <div>
+                        <label for="tone">Tone</label>
+                        <select id="tone">
+                            <option value="eerie">Eerie</option>
+                            <option value="dread">Dread</option>
+                            <option value="unhinged">Unhinged</option>
+                            <option value="funny">Funny</option>
+                        </select>
+                        <p id="tone-note" class="text-xs text-gray-600 mt-1.5"></p>
+                    </div>
 
                     <button id="generate" class="btn w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white">
                         Generate Poster
@@ -588,7 +594,7 @@ async function generate() {
             genre: el('genre').value,
             era: el('era').value,
             plot: el('plot').value.trim(),
-            intensity: el('intensity').checked ? 'hardcore' : 'normal',
+            tone: el('tone').value,
             avoidTitles: avoidList(),
             textProvider: el('writer').value
         });
@@ -792,6 +798,21 @@ function escapeHtml(s) {
     div.textContent = String(s ?? '');
     return div.innerHTML;
 }
+
+// Kept in step with TONES in lib/concept.js — the server is the authority on
+// what each tone actually does; this is just the label for it.
+const TONE_NOTES = {
+    eerie: 'Atmospheric and unsettling. The house style.',
+    dread: 'Maximum menace. Terror by implication, never by gore.',
+    unhinged: 'Lurid, feverish, past good taste. Wild by structure, not by blood.',
+    funny: 'Horror-comedy schlock. The joke has to actually land.'
+};
+
+function describeTone() {
+    el('tone-note').textContent = TONE_NOTES[el('tone').value] || '';
+}
+describeTone();
+el('tone').onchange = describeTone;
 
 // Events
 el('generate').onclick = generate;

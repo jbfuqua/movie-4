@@ -1,6 +1,6 @@
 import { handler } from '../lib/http.js';
 import { structured, defaultTextProvider } from '../lib/text/index.js';
-import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock } from '../lib/concept.js';
+import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock, toneSpec } from '../lib/concept.js';
 import { checkCopy } from '../lib/copy-check.js';
 
 // The whole request must finish inside the serverless function's 60s ceiling, so
@@ -27,12 +27,20 @@ export default handler('POST', async (body) => {
         genre = 'any',
         era = 'any',
         plot = '',
-        intensity = 'normal',
+        tone: requestedTone,
+        // Superseded by `tone`. Still read, because a phone with the old page
+        // cached will keep sending it, and silently dropping the user's darker
+        // toggle is worse than a three-line shim.
+        intensity,
         avoidTitles = [],
         // Which writer. Undefined falls through to TEXT_PROVIDER, then to
         // whichever provider has a key.
         textProvider
     } = body;
+
+    // toneSpec() falls back to the house style on anything unknown, so a bad tone
+    // string degrades to "eerie" rather than 500ing.
+    const tone = toneSpec(requestedTone || (intensity === 'hardcore' ? 'dread' : 'eerie')).id;
 
     // Opus 4.8 takes no temperature, so variety has to come from the prompt.
     // A seed plus the real recent-titles list beats the old approach — a
@@ -48,7 +56,7 @@ export default handler('POST', async (body) => {
         genre,
         era,
         plot: String(plot || '').trim(),
-        intensity,
+        tone,
         avoidTitles: Array.isArray(avoidTitles) ? avoidTitles : [],
         seed
     });
@@ -70,7 +78,7 @@ export default handler('POST', async (body) => {
 
     // Title and tagline are the two fields prose instructions have repeatedly
     // failed to control, so they are checked in code.
-    const complaints = checkCopy(concept);
+    const complaints = checkCopy(concept, tone);
     let copyRejected;
 
     if (complaints.length) {
@@ -99,9 +107,12 @@ export default handler('POST', async (body) => {
                     'The TITLE names the threat or the sensation, never the setting and never the weather. Flat is fine; inert is not. "Barbarian" is one flat noun and it bites. If it could be a label on a building directory, it is a caption, not a title.',
                     '',
                     'The TAGLINE is a hook — a threat, a dare, a warning, a rule you must not break. "In space no one can hear you scream." "Don\'t go in the water." "They\'re here." Plain words, present tense, often imperative. It must never merely describe an event in the film.',
+                    // The retry inherits the tone, or it "fixes" a comic tagline
+                    // into a menacing one and undoes the thing the user asked for.
+                    toneSpec(tone).copy || '',
                     '',
                     'Write the ones a marketing department would actually have printed to sell tickets.'
-                ].join('\n')
+                ].filter(Boolean).join('\n')
             });
 
             concept.title = fixed.title;
@@ -115,6 +126,7 @@ export default handler('POST', async (body) => {
         concept,
         seed,
         writer,
+        tone,
         copyRejected,
         elapsedMs: Date.now() - started,
         // Precomputed so the client never has to reassemble either of these.
