@@ -747,10 +747,18 @@ function renderAudience(review) {
         ? `<div class="text-xs text-gray-600 mt-1.5">Was: “${escapeHtml(review.original.title)}” — “${escapeHtml(review.original.tagline)}”</div>`
         : '';
 
+    // Say WHICH rule it broke. "Rewrite broke the copy rules" on its own is a
+    // dead end for anyone trying to work out whether the guard or the writer is
+    // at fault.
+    const why = review.rejected
+        ? `<div class="text-xs text-amber-600/80 mt-1.5">${review.rejected.map(escapeHtml).join(' · ')}</div>`
+        : '';
+
     el('audience').innerHTML = `
         ${badges.join(' ')}
         <div class="text-sm text-gray-400 mt-2 italic">“${escapeHtml(review.reaction)}”</div>
         ${was}
+        ${why}
     `;
     el('audience').classList.remove('hidden');
 }
