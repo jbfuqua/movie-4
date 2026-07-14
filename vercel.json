@@ -14,6 +14,9 @@
     },
     "api/warm-writer.js": {
       "maxDuration": 60
+    },
+    "api/review-copy.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

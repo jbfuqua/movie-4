@@ -57,6 +57,7 @@
                     <img id="poster" class="hidden" alt="Generated movie poster">
                 </div>
 
+                <div id="audience" class="mt-3 hidden"></div>
                 <div id="verdict" class="mt-3 hidden"></div>
                 <div id="error" class="mt-3 hidden text-sm bg-red-950/50 border border-red-900 text-red-300 rounded-lg p-3"></div>
                 <canvas id="canvas" class="hidden"></canvas>
@@ -130,6 +131,14 @@
                             <option value="funny">Funny</option>
                         </select>
                         <p id="tone-note" class="text-xs text-gray-600 mt-1.5"></p>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer !normal-case !tracking-normal !text-sm !text-gray-300 !mb-0">
+                            <input type="checkbox" id="screening" checked class="!w-4 !h-4 accent-indigo-500">
+                            Test screening
+                        </label>
+                        <p class="text-xs text-gray-600 mt-1.5">Shows the title and tagline to a moviegoer in a lobby before the poster is painted. They rewrite the copy if it doesn't sell. Costs a few seconds.</p>
                     </div>
 
                     <button id="generate" class="btn w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white">
@@ -584,22 +593,40 @@ async function generate() {
     el('save-btn').disabled = true;
     el('save-ig-btn').disabled = true;
     el('error').classList.add('hidden');
+    el('audience').classList.add('hidden');
     el('verdict').classList.add('hidden');
     el('poster').classList.add('hidden');
     el('loader').classList.remove('hidden');
 
     try {
+        const tone = el('tone').value;
+
         status('Writing the film…');
         const { concept, credits, copyRejected } = await post('generate-concept', {
             genre: el('genre').value,
             era: el('era').value,
             plot: el('plot').value.trim(),
-            tone: el('tone').value,
+            tone,
             avoidTitles: avoidList(),
             textProvider: el('writer').value
         });
         state.concept = concept;
         state.copyRejected = copyRejected;
+
+        // The test screening, before a single pixel is painted — the whole point
+        // is to fix the copy while it is still cheap to fix.
+        if (el('screening').checked) {
+            status('Testing it on an audience…');
+            const review = await screen(concept, tone);
+            if (review?.changed) {
+                concept.title = review.title;
+                concept.tagline = review.tagline;
+            }
+        }
+
+        // Both of these must run on the FINAL copy: renderDetails so the page
+        // shows what is actually on the poster, and rememberFilm so the
+        // anti-repetition list holds the title we shipped, not the draft.
         rememberFilm(concept);
         renderDetails(concept);
 
@@ -677,6 +704,55 @@ function shrinkForVision(posterDataUrl) {
         img.onerror = () => reject(new Error('Could not load the poster for proofreading'));
         img.src = posterDataUrl;
     });
+}
+
+const VERDICTS = {
+    buy: { badge: 'badge-ok', text: 'Would buy a ticket' },
+    curious: { badge: 'badge-info', text: 'Caught their eye' },
+    walk_past: { badge: 'badge-warn', text: 'Walked past it' }
+};
+
+/**
+ * Show the copy to a stranger before we paint anything.
+ *
+ * Advisory, never fatal: if the screening fails we still have a perfectly good
+ * concept, and refusing to make the poster because nobody could be found to
+ * review it would be absurd. Returns null on failure.
+ */
+async function screen(concept, tone) {
+    try {
+        const review = await post('review-copy', {
+            concept,
+            tone,
+            textProvider: el('writer').value
+        });
+        renderAudience(review);
+        return review;
+    } catch (error) {
+        el('audience').classList.remove('hidden');
+        el('audience').innerHTML = `<span class="badge badge-warn">Test screening failed — copy unchanged</span>`;
+        console.warn('screening failed:', error.message);
+        return null;
+    }
+}
+
+function renderAudience(review) {
+    const verdict = VERDICTS[review.verdict] || VERDICTS.curious;
+
+    const badges = [`<span class="badge ${verdict.badge}">Audience · ${verdict.text}</span>`];
+    if (review.changed) badges.push('<span class="badge badge-info">Copy rewritten</span>');
+    if (review.rejected) badges.push('<span class="badge badge-warn">Rewrite broke the copy rules — kept the original</span>');
+
+    const was = review.changed
+        ? `<div class="text-xs text-gray-600 mt-1.5">Was: “${escapeHtml(review.original.title)}” — “${escapeHtml(review.original.tagline)}”</div>`
+        : '';
+
+    el('audience').innerHTML = `
+        ${badges.join(' ')}
+        <div class="text-sm text-gray-400 mt-2 italic">“${escapeHtml(review.reaction)}”</div>
+        ${was}
+    `;
+    el('audience').classList.remove('hidden');
 }
 
 // The closed loop: we know exactly what the title was supposed to say, so we can

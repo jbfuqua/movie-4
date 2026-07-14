@@ -1,6 +1,6 @@
 import { handler } from '../lib/http.js';
 import { structured, defaultTextProvider } from '../lib/text/index.js';
-import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock, toneSpec } from '../lib/concept.js';
+import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock, toneSpec, copyRules } from '../lib/concept.js';
 import { checkCopy } from '../lib/copy-check.js';
 
 // The whole request must finish inside the serverless function's 60s ceiling, so
@@ -101,18 +101,13 @@ export default handler('POST', async (body) => {
                     '',
                     'The previous attempt was REJECTED:',
                     ...complaints.map((c) => `- ${c}`),
-                    '',
-                    'A poster\'s artwork withholds. A poster\'s COPY SELLS — they are opposite crafts, and an atmospheric, evocative title or tagline is a failed one.',
-                    '',
-                    'The TITLE names the threat or the sensation, never the setting and never the weather. Flat is fine; inert is not. "Barbarian" is one flat noun and it bites. If it could be a label on a building directory, it is a caption, not a title.',
-                    '',
-                    'The TAGLINE is a hook — a threat, a dare, a warning, a rule you must not break. "In space no one can hear you scream." "Don\'t go in the water." "They\'re here." Plain words, present tense, often imperative. It must never merely describe an event in the film.',
-                    // The retry inherits the tone, or it "fixes" a comic tagline
-                    // into a menacing one and undoes the thing the user asked for.
-                    toneSpec(tone).copy || '',
+                    // Shared with the concept brief and the audience rewrite, so
+                    // the three cannot drift. The tone travels with them, or this
+                    // "fixes" a comic tagline into a menacing one.
+                    ...copyRules(tone),
                     '',
                     'Write the ones a marketing department would actually have printed to sell tickets.'
-                ].filter(Boolean).join('\n')
+                ].join('\n')
             });
 
             concept.title = fixed.title;
