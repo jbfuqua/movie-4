@@ -602,7 +602,7 @@ async function generate() {
         const tone = el('tone').value;
 
         status('Writing the film…');
-        const { concept, credits, copyRejected } = await post('generate-concept', {
+        const { concept, credits } = await post('generate-concept', {
             genre: el('genre').value,
             era: el('era').value,
             plot: el('plot').value.trim(),
@@ -611,7 +611,6 @@ async function generate() {
             textProvider: el('writer').value
         });
         state.concept = concept;
-        state.copyRejected = copyRejected;
 
         // The test screening, before a single pixel is painted — the whole point
         // is to fix the copy while it is still cheap to fix.
@@ -741,24 +740,22 @@ function renderAudience(review) {
 
     const badges = [`<span class="badge ${verdict.badge}">Audience · ${verdict.text}</span>`];
     if (review.changed) badges.push('<span class="badge badge-info">Copy rewritten</span>');
-    if (review.rejected) badges.push('<span class="badge badge-warn">Rewrite broke the copy rules — kept the original</span>');
 
     const was = review.changed
         ? `<div class="text-xs text-gray-600 mt-1.5">Was: “${escapeHtml(review.original.title)}” — “${escapeHtml(review.original.tagline)}”</div>`
         : '';
 
-    // Say WHICH rule it broke. "Rewrite broke the copy rules" on its own is a
-    // dead end for anyone trying to work out whether the guard or the writer is
-    // at fault.
-    const why = review.rejected
-        ? `<div class="text-xs text-amber-600/80 mt-1.5">${review.rejected.map(escapeHtml).join(' · ')}</div>`
+    // Advisory only — the copy still shipped. A quiet heads-up if it tripped one
+    // of the soft checks, not a rejection.
+    const notes = review.copyNotes?.length
+        ? `<div class="text-xs text-gray-600 mt-1.5">Heads-up: ${review.copyNotes.map(escapeHtml).join(' · ')}</div>`
         : '';
 
     el('audience').innerHTML = `
         ${badges.join(' ')}
         <div class="text-sm text-gray-400 mt-2 italic">“${escapeHtml(review.reaction)}”</div>
         ${was}
-        ${why}
+        ${notes}
     `;
     el('audience').classList.remove('hidden');
 }
@@ -778,11 +775,6 @@ async function verify(imageUrl, concept, image) {
 
         const clean = verdict.title_correct && verdict.legible && !verdict.stray_text;
         const badges = [`<span class="badge badge-info">${image.model}</span>`];
-        // The copy guard fired and there was no time left to rewrite. Say so,
-        // rather than quietly shipping the title it just rejected.
-        if (state.copyRejected) {
-            badges.push('<span class="badge badge-warn">Copy guard rejected the title/tagline but could not rewrite in time</span>');
-        }
 
         if (clean) {
             badges.push('<span class="badge badge-ok">Title renders correctly</span>');

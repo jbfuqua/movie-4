@@ -1,24 +1,13 @@
 import { handler } from '../lib/http.js';
 import { structured, defaultTextProvider } from '../lib/text/index.js';
-import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock, toneSpec, copyRules } from '../lib/concept.js';
+import { CONCEPT_SCHEMA, conceptPrompt, imagePrompt, creditsBlock, toneSpec } from '../lib/concept.js';
 import { checkCopy } from '../lib/copy-check.js';
 
-// The whole request must finish inside the serverless function's 60s ceiling, so
-// the two calls share a budget rather than each assuming it has the full window.
+// One generation call, inside the serverless function's 60s ceiling. This used
+// to also run a second call to "fix" copy the regex disliked — that gate is
+// gone: it fought the prompt, cost ~18s, and the test screening is the real
+// judge now. Dropping it is also what buys the room to raise thinking effort.
 const TOTAL_BUDGET_MS = 52_000;
-const COPY_FIX_BUDGET_MS = 18_000;
-
-// The retry only ever needs to replace two fields. Regenerating the entire
-// concept — art direction, crew, the lot — was what pushed this over 60s.
-const COPY_SCHEMA = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['title', 'tagline'],
-    properties: {
-        title: CONCEPT_SCHEMA.properties.title,
-        tagline: CONCEPT_SCHEMA.properties.tagline
-    }
-};
 
 export default handler('POST', async (body) => {
     const started = Date.now();
@@ -48,8 +37,6 @@ export default handler('POST', async (body) => {
     // what this user actually just generated, not from a fixed list.
     const seed = Math.floor(Math.random() * 1_000_000);
 
-    // Resolved once, so the copy-fix retry cannot land on a different writer
-    // than the one that wrote the film, and so the response can report it.
     const writer = textProvider || defaultTextProvider();
 
     const brief = conceptPrompt({
@@ -64,65 +51,30 @@ export default handler('POST', async (body) => {
     // Adaptive thinking is what makes the "consider several, discard the weak
     // ones" instructions executable at all — without it the model writes straight
     // into the schema in one pass and has nowhere to do the discarding. Effort is
-    // low because the scratch space is what matters here, not the depth of it,
-    // and this has to fit in a 60s function.
+    // medium (was low): copy quality is the whole complaint, and this is the
+    // single biggest lever on it after the prompt. The removed copy-fix call is
+    // what makes room for it inside the 60s window.
     const concept = await structured({
         provider: writer,
         prompt: brief,
         schema: CONCEPT_SCHEMA,
         maxTokens: 6000,
         think: true,
-        effort: 'low',
+        effort: 'medium',
         deadlineMs: TOTAL_BUDGET_MS
     });
 
-    // Title and tagline are the two fields prose instructions have repeatedly
-    // failed to control, so they are checked in code.
-    const complaints = checkCopy(concept, tone);
-    let copyRejected;
-
-    if (complaints.length) {
-        copyRejected = complaints;
-        const remaining = TOTAL_BUDGET_MS - (Date.now() - started);
-
-        if (remaining > COPY_FIX_BUDGET_MS) {
-            const fixed = await structured({
-                provider: writer,
-                schema: COPY_SCHEMA,
-                maxTokens: 2000,
-                think: true,
-                effort: 'low',
-                deadlineMs: Math.min(remaining, COPY_FIX_BUDGET_MS),
-                prompt: [
-                    'Rewrite the title and tagline for this film. Everything else about it is settled and is not changing.',
-                    '',
-                    `Film: ${concept.synopsis}`,
-                    `Era: ${concept.decade}. Genre: ${concept.genre}.`,
-                    '',
-                    'The previous attempt was REJECTED:',
-                    ...complaints.map((c) => `- ${c}`),
-                    // Shared with the concept brief and the audience rewrite, so
-                    // the three cannot drift. The tone travels with them, or this
-                    // "fixes" a comic tagline into a menacing one.
-                    ...copyRules(tone),
-                    '',
-                    'Write the ones a marketing department would actually have printed to sell tickets.'
-                ].join('\n')
-            });
-
-            concept.title = fixed.title;
-            concept.tagline = fixed.tagline;
-        }
-        // Out of budget: keep the rejected copy rather than 504. copyRejected
-        // surfaces it, so the failure is visible instead of silent.
-    }
+    // Advisory only. The regex used to REJECT and regenerate on these; now it
+    // just flags them, and the test screening (or the user) decides. An empty
+    // array is the common case.
+    const copyNotes = checkCopy(concept, tone);
 
     return {
         concept,
         seed,
         writer,
         tone,
-        copyRejected,
+        copyNotes,
         elapsedMs: Date.now() - started,
         // Precomputed so the client never has to reassemble either of these.
         imagePrompt: imagePrompt(concept),
