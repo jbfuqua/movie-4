@@ -17,6 +17,9 @@
     },
     "api/review-copy.js": {
       "maxDuration": 60
+    },
+    "api/pitch-ideas.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

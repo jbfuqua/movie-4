@@ -149,11 +149,26 @@
                         <input type="checkbox" id="auto" class="!w-4 !h-4 accent-indigo-500">
                         Auto-generate every 60s
                     </label>
+
+                    <div class="pt-3 mt-1 border-t border-gray-800">
+                        <button id="brainstorm-btn" class="btn w-full py-2.5 text-sm bg-amber-700 hover:bg-amber-600 text-white">
+                            Brainstorm 8 ideas
+                        </button>
+                        <p class="text-xs text-gray-600 mt-1.5">Prototype: pitches 8 monster ideas and lets a brutal critic pick one. Shows the whole slate so you can see what it chose between. No poster, just ideas.</p>
+                    </div>
                 </div>
 
                 <div id="details-panel" class="panel p-5 space-y-3 hidden">
                     <h2 class="font-semibold">The Film</h2>
                     <div id="details" class="space-y-3 text-sm"></div>
+                </div>
+
+                <div id="slate-panel" class="panel p-5 space-y-3 hidden">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-semibold">Idea Slate</h2>
+                        <span id="slate-meta" class="text-xs text-gray-600"></span>
+                    </div>
+                    <div id="slate"></div>
                 </div>
 
                 <div id="song-panel" class="panel p-5 hidden">
@@ -735,6 +750,59 @@ async function screen(concept, tone) {
     }
 }
 
+// --- Idea-picker prototype -------------------------------------------------
+// Pitch 8 monster ideas, let a brutal critic cut to one, and show the whole
+// slate so the selection is visible. Deliberately separate from the poster flow.
+async function brainstorm() {
+    const btn = el('brainstorm-btn');
+    btn.disabled = true;
+    btn.textContent = 'Pitching…';
+    el('slate-panel').classList.remove('hidden');
+    el('slate').innerHTML = '<div class="flex items-center gap-3 text-sm text-gray-400"><div class="spinner"></div> Pitching a slate, then cutting it…</div>';
+    el('slate-meta').textContent = '';
+
+    try {
+        const data = await post('pitch-ideas', {
+            era: el('era').value,
+            genre: el('genre').value,
+            tone: el('tone').value,
+            textProvider: el('writer').value,
+            avoidTitles: avoidList()
+        });
+        renderSlate(data);
+    } catch (error) {
+        el('slate').innerHTML = `<span class="badge badge-warn">${escapeHtml(error.message)}</span>`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Brainstorm 8 ideas';
+    }
+}
+
+function renderSlate(data) {
+    const scoreColor = (s) => s >= 7 ? 'text-emerald-400' : s >= 4 ? 'text-amber-400' : 'text-gray-500';
+
+    // Winner first, then the rest by score, so the good stuff is at the top.
+    const order = data.candidates
+        .map((c, i) => ({ c, i }))
+        .sort((a, b) => (b.i === data.winner) - (a.i === data.winner) || (b.c.score ?? -1) - (a.c.score ?? -1));
+
+    el('slate').innerHTML = order.map(({ c, i }) => {
+        const win = i === data.winner;
+        return `
+        <div class="rounded-lg p-3 mb-2 border ${win ? 'border-emerald-600 bg-emerald-950/30' : 'border-gray-800 bg-gray-900/40'}">
+            <div class="flex items-baseline justify-between gap-2">
+                <span class="font-semibold">${win ? '★ ' : ''}${escapeHtml(c.title)}</span>
+                <span class="text-sm font-bold ${scoreColor(c.score)}">${c.score ?? '—'}/10</span>
+            </div>
+            <div class="text-xs text-gray-500 mt-0.5">${escapeHtml(c.monster)}</div>
+            <div class="text-sm text-gray-300 mt-1.5">${escapeHtml(c.logline)}</div>
+            ${c.note ? `<div class="text-xs italic text-gray-500 mt-1.5">critic: ${escapeHtml(c.note)}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    el('slate-meta').textContent = `pick: ${escapeHtml(data.why || '')}`.slice(0, 90);
+}
+
 function renderAudience(review) {
     const verdict = VERDICTS[review.verdict] || VERDICTS.curious;
 
@@ -892,6 +960,7 @@ el('tone').onchange = describeTone;
 
 // Events
 el('generate').onclick = generate;
+el('brainstorm-btn').onclick = brainstorm;
 el('regen-btn').onclick = generate;
 
 // iOS Safari ignores the download attribute on a data: URL, and will not act on
