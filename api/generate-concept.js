@@ -22,10 +22,25 @@ export default handler('POST', async (body) => {
         // toggle is worse than a three-line shim.
         intensity,
         avoidTitles = [],
+        // An idea picked from the brainstormed slate. When present it DRIVES the
+        // concept: its title and monster are kept and its logline becomes the film.
+        // This is the wire that ties the idea-picker to the poster — without it the
+        // two flows produce unrelated films. Sanitised to the three fields the
+        // prompt reads, so a stale client cannot smuggle anything else through.
+        idea,
         // Which writer. Undefined falls through to TEXT_PROVIDER, then to
         // whichever provider has a key.
         textProvider
     } = body;
+
+    const chosenIdea = idea && typeof idea === 'object'
+        ? {
+            title: String(idea.title || '').trim(),
+            monster: String(idea.monster || '').trim(),
+            logline: String(idea.logline || '').trim()
+        }
+        : null;
+    const hasIdea = !!(chosenIdea && (chosenIdea.title || chosenIdea.monster || chosenIdea.logline));
 
     // toneSpec() falls back to the house style on anything unknown, so a bad tone
     // string degrades to "eerie" rather than 500ing.
@@ -45,7 +60,8 @@ export default handler('POST', async (body) => {
         plot: String(plot || '').trim(),
         tone,
         avoidTitles: Array.isArray(avoidTitles) ? avoidTitles : [],
-        seed
+        seed,
+        idea: hasIdea ? chosenIdea : null
     });
 
     // Adaptive thinking is what makes the "consider several, discard the weak
@@ -74,6 +90,9 @@ export default handler('POST', async (body) => {
         seed,
         writer,
         tone,
+        // Echo which picked idea this concept was developed from (null for a fresh,
+        // un-seeded generation), so the client can show the poster's provenance.
+        developedFrom: hasIdea ? chosenIdea.title : null,
         copyNotes,
         elapsedMs: Date.now() - started,
         // Precomputed so the client never has to reassemble either of these.

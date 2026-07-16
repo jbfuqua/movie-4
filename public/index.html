@@ -141,6 +141,17 @@
                         <p class="text-xs text-gray-600 mt-1.5">Shows the title and tagline to a moviegoer in a lobby before the poster is painted. They rewrite the copy if it doesn't sell. Costs a few seconds.</p>
                     </div>
 
+                    <div id="chosen-idea" class="hidden rounded-lg border border-indigo-600 bg-indigo-950/40 p-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-[11px] uppercase tracking-wider text-indigo-300">Developing your pick</p>
+                                <p id="chosen-title" class="font-semibold mt-0.5 truncate"></p>
+                                <p id="chosen-logline" class="text-xs text-gray-400 mt-1"></p>
+                            </div>
+                            <button id="chosen-clear" class="btn px-2 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 shrink-0">Clear</button>
+                        </div>
+                    </div>
+
                     <button id="generate" class="btn w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white">
                         Generate Poster
                     </button>
@@ -154,7 +165,7 @@
                         <button id="brainstorm-btn" class="btn w-full py-2.5 text-sm bg-amber-700 hover:bg-amber-600 text-white">
                             Brainstorm 8 ideas
                         </button>
-                        <p class="text-xs text-gray-600 mt-1.5">Prototype: pitches 8 monster ideas and lets a brutal critic pick one. Shows the whole slate so you can see what it chose between. No poster, just ideas.</p>
+                        <p class="text-xs text-gray-600 mt-1.5">Pitches 8 monster ideas and lets a brutal critic score them. Pick any one from the slate and it becomes the film your next poster develops.</p>
                     </div>
                 </div>
 
@@ -168,6 +179,7 @@
                         <h2 class="font-semibold">Idea Slate</h2>
                         <span id="slate-meta" class="text-xs text-gray-600"></span>
                     </div>
+                    <p class="text-xs text-gray-600">Click one to pick the film your poster develops. The critic's choice is selected by default.</p>
                     <div id="slate"></div>
                 </div>
 
@@ -431,7 +443,12 @@ async function post(path, body) {
 }
 
 const el = (id) => document.getElementById(id);
-const state = { busy: false, concept: null, poster: null, recent: [], timer: null, canProofread: true };
+const state = { busy: false, concept: null, poster: null, recent: [], timer: null, canProofread: true,
+    // The idea picked from the brainstormed slate that the next poster develops.
+    // chosenIdea is the {title, monster, logline} sent to the writer; chosenIndex
+    // tracks which card is highlighted; slate is the last slate, kept so a click
+    // can re-render the selection.
+    chosenIdea: null, chosenIndex: null, slate: null };
 
 // The films this studio has already released.
 //
@@ -623,7 +640,11 @@ async function generate() {
             plot: el('plot').value.trim(),
             tone,
             avoidTitles: avoidList(),
-            textProvider: el('writer').value
+            textProvider: el('writer').value,
+            // When a slate idea is picked, the writer DEVELOPS it (keeps its title
+            // and monster) instead of inventing a fresh film. This is the link the
+            // two flows were missing. Undefined when nothing is picked.
+            idea: state.chosenIdea || undefined
         });
         state.concept = concept;
 
@@ -757,6 +778,11 @@ async function brainstorm() {
     const btn = el('brainstorm-btn');
     btn.disabled = true;
     btn.textContent = 'Pitching…';
+    // A fresh slate supersedes any earlier pick; renderSlate re-seeds the default
+    // to the new winner.
+    state.chosenIdea = null;
+    state.chosenIndex = null;
+    updateGenerateCta();
     el('slate-panel').classList.remove('hidden');
     el('slate').innerHTML = '<div class="flex items-center gap-3 text-sm text-gray-400"><div class="spinner"></div> Pitching a slate, then cutting it…</div>';
     el('slate-meta').textContent = '';
@@ -779,6 +805,16 @@ async function brainstorm() {
 }
 
 function renderSlate(data) {
+    // Seed the selection to the critic's winner ONLY when a genuinely new slate
+    // arrives (a fresh object from brainstorm), so Generate always starts wired to
+    // the good one. Re-renders from clicking or clearing pass the SAME object, so
+    // they must not re-seed — otherwise Clear could never take effect.
+    const isNewSlate = state.slate !== data;
+    state.slate = data;
+    if (isNewSlate && Number.isInteger(data.winner) && data.candidates[data.winner]) {
+        selectCard(data.winner, false);
+    }
+
     const scoreColor = (s) => s >= 7 ? 'text-emerald-400' : s >= 4 ? 'text-amber-400' : 'text-gray-500';
 
     // Winner first, then the rest by score, so the good stuff is at the top.
@@ -788,8 +824,16 @@ function renderSlate(data) {
 
     el('slate').innerHTML = order.map(({ c, i }) => {
         const win = i === data.winner;
+        const sel = i === state.chosenIndex;
+        // Selection is the loudest state (indigo ring); the critic's ★ winner keeps
+        // its emerald tint underneath so both stay visible when they coincide.
+        const frame = sel
+            ? 'border-indigo-500 bg-indigo-950/40 ring-1 ring-indigo-500'
+            : win
+                ? 'border-emerald-700 bg-emerald-950/20 hover:border-emerald-500'
+                : 'border-gray-800 bg-gray-900/40 hover:border-gray-600';
         return `
-        <div class="rounded-lg p-3 mb-2 border ${win ? 'border-emerald-600 bg-emerald-950/30' : 'border-gray-800 bg-gray-900/40'}">
+        <div class="slate-card rounded-lg p-3 mb-2 border cursor-pointer transition-colors ${frame}" data-index="${i}">
             <div class="flex items-baseline justify-between gap-2">
                 <span class="font-semibold">${win ? '★ ' : ''}${escapeHtml(c.title)}</span>
                 <span class="text-sm font-bold ${scoreColor(c.score)}">${c.score ?? '—'}/10</span>
@@ -797,10 +841,44 @@ function renderSlate(data) {
             <div class="text-xs text-gray-500 mt-0.5">${escapeHtml(c.monster)}</div>
             <div class="text-sm text-gray-300 mt-1.5">${escapeHtml(c.logline)}</div>
             ${c.note ? `<div class="text-xs italic text-gray-500 mt-1.5">critic: ${escapeHtml(c.note)}</div>` : ''}
+            <div class="mt-2 text-xs font-semibold ${sel ? 'text-indigo-300' : 'text-gray-600'}">${sel ? '✓ Selected — feeds the poster' : 'Use this idea →'}</div>
         </div>`;
     }).join('');
 
+    el('slate').querySelectorAll('.slate-card').forEach((card) => {
+        card.onclick = () => selectCard(Number(card.dataset.index), true);
+    });
+
     el('slate-meta').textContent = `pick: ${escapeHtml(data.why || '')}`.slice(0, 90);
+}
+
+// Pick a slate card as the idea the next poster develops. `rerender` is false only
+// for the default-winner seed inside renderSlate itself, to avoid re-entering it.
+function selectCard(i, rerender = true) {
+    const c = state.slate?.candidates?.[i];
+    if (!c) return;
+    state.chosenIndex = i;
+    state.chosenIdea = { title: c.title, monster: c.monster, logline: c.logline };
+    updateGenerateCta();
+    if (rerender) renderSlate(state.slate);
+}
+
+function clearIdea() {
+    state.chosenIndex = null;
+    state.chosenIdea = null;
+    updateGenerateCta();
+    if (state.slate) renderSlate(state.slate);
+}
+
+// Reflect the current pick on the Generate button and the banner above it.
+function updateGenerateCta() {
+    const idea = state.chosenIdea;
+    el('chosen-idea').classList.toggle('hidden', !idea);
+    el('generate').textContent = idea ? 'Generate this poster' : 'Generate Poster';
+    if (idea) {
+        el('chosen-title').textContent = `★ ${idea.title}`;
+        el('chosen-logline').textContent = idea.logline || '';
+    }
 }
 
 function renderAudience(review) {
@@ -962,6 +1040,8 @@ el('tone').onchange = describeTone;
 el('generate').onclick = generate;
 el('brainstorm-btn').onclick = brainstorm;
 el('regen-btn').onclick = generate;
+el('chosen-clear').onclick = clearIdea;
+updateGenerateCta();
 
 // iOS Safari ignores the download attribute on a data: URL, and will not act on
 // an anchor that was never put in the document — so the old version of this
