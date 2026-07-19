@@ -351,7 +351,146 @@ function instagramFrame(posterDataUrl) {
     });
 }
 
-function compose(img, credits) {
+// ---------------------------------------------------------------------------
+// The analog pass. Runs on EVERY poster, in both credit modes, before it is
+// shown or saved.
+//
+// The image models render too clean: uniform sharpness, glassy surfaces, pure
+// blacks and whites, saturated screen colour, no media texture. That uniform
+// perfection IS the "AI look". No prompt fully beats the model's prior, so we
+// finish the job deterministically here — adding the analog imperfections a real
+// printed sheet has and a render never does: compressed ink gamut (blacks lift,
+// whites drop), slightly muted colour, plate misregistration, a halftone dot,
+// film grain, age warmth, and a photographed-object vignette.
+//
+// It is applied to the ARTWORK only (before any composited credits are drawn),
+// so the credits we set stay crisp.
+// ---------------------------------------------------------------------------
+
+// How hard to push it, by decade. Older stock is coarser, warmer, more
+// misregistered and more faded; modern printing is tighter and cleaner — but
+// every era is still ink on paper, so nothing goes to zero. Tuned conservative:
+// the failure mode of this whole pass is looking like an Instagram filter.
+function analogProfile(decade) {
+    const era = ({
+        '1950s': 1.0, '1960s': 0.9, '1970s': 0.78, '1980s': 0.62,
+        '1990s': 0.46, '2000s': 0.34, '2010s': 0.22, '2020s': 0.15
+    })[decade] ?? 0.45;
+    return {
+        grain: 5 + era * 9,        // ± luminance noise added per pixel
+        blackLift: 5 + era * 11,   // pure black raised to this (ink never hits 0)
+        whitePull: 4 + era * 8,    // pure white pulled down by this (paper isn't lit-white)
+        sat: 1 - era * 0.13,       // desaturate toward luma
+        warmth: era * 9,           // age yellowing: R up, B down
+        chroma: era > 0.5 ? Math.max(1, era) : 0, // plate-misregistration shift, older only
+        halftone: era * 0.05,      // dot-screen opacity
+        vignette: 0.05 + era * 0.06
+    };
+}
+
+// A repeating dot tile, drawn over the poster at low opacity to stand in for the
+// halftone screen. Not a true CMYK rosette — a cheat that reads right at size and
+// breaks up the digital smoothness under a zoom.
+function halftoneTile(cell) {
+    const c = document.createElement('canvas');
+    c.width = c.height = cell;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#000';
+    cx.beginPath();
+    cx.arc(cell / 2, cell / 2, cell * 0.30, 0, Math.PI * 2);
+    cx.fill();
+    return c;
+}
+
+// Mutates the canvas in place. Expects the artwork already drawn onto ctx.
+function applyAnalog(canvas, ctx, decade) {
+    const w = canvas.width, h = canvas.height;
+    const p = analogProfile(decade);
+
+    const src = ctx.getImageData(0, 0, w, h);
+    const s = src.data;
+    const out = new Uint8ClampedArray(s.length);
+
+    const sh = p.chroma ? Math.max(1, Math.round(w * 0.0006)) : 0;
+    // Map [0,255] into the compressed ink range [blackLift, 255 - whitePull].
+    const scale = (255 - p.whitePull - p.blackLift) / 255;
+
+    for (let y = 0; y < h; y++) {
+        const row = y * w;
+        for (let x = 0; x < w; x++) {
+            const i = (row + x) * 4;
+            // Registration/chromatic drift: pull red and blue from opposite sides.
+            const ri = sh ? (row + (x + sh < w ? x + sh : w - 1)) * 4 : i;
+            const bi = sh ? (row + (x - sh >= 0 ? x - sh : 0)) * 4 : i;
+            let r = s[ri], g = s[i + 1], b = s[bi + 2];
+
+            // Ink gamut: lift blacks, drop whites.
+            r = p.blackLift + r * scale;
+            g = p.blackLift + g * scale;
+            b = p.blackLift + b * scale;
+
+            // Desaturate toward luminance.
+            const l = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = l + (r - l) * p.sat;
+            g = l + (g - l) * p.sat;
+            b = l + (b - l) * p.sat;
+
+            // Age warmth.
+            r += p.warmth;
+            b -= p.warmth;
+
+            // Monochrome grain, same on all channels so it reads as film, not chroma noise.
+            const n = (Math.random() - 0.5) * p.grain * 2;
+            out[i] = r + n;
+            out[i + 1] = g + n;
+            out[i + 2] = b + n;
+            out[i + 3] = 255;
+        }
+    }
+    ctx.putImageData(new ImageData(out, w, h), 0, 0);
+
+    if (p.halftone > 0.003) {
+        const cell = Math.max(3, Math.round(w * 0.0022));
+        ctx.save();
+        ctx.globalAlpha = p.halftone;
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = ctx.createPattern(halftoneTile(cell), 'repeat');
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+    }
+
+    // Vignette: the poster is a photographed object, and a real sheet under a
+    // light falls off toward its corners.
+    const vig = ctx.createRadialGradient(
+        w / 2, h / 2, Math.min(w, h) * 0.35,
+        w / 2, h / 2, Math.max(w, h) * 0.72
+    );
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, `rgba(0,0,0,${p.vignette})`);
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
+}
+
+// Model-credits mode never touches a canvas otherwise — so this is where the
+// analog pass gets applied to those posters. Returns a fresh data URL.
+function renderAnalog(imageUrl, decade) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0);
+            applyAnalog(canvas, ctx, decade);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => reject(new Error('Could not load the generated image'));
+        img.src = imageUrl;
+    });
+}
+
+function compose(img, credits, decade) {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = img.naturalWidth;
@@ -359,6 +498,9 @@ function compose(img, credits) {
     const { width: w, height: h } = canvas;
 
     ctx.drawImage(img, 0, 0, w, h);
+
+    // Age the artwork first, then set the credits on top so they stay crisp.
+    applyAnalog(canvas, ctx, decade);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -675,11 +817,16 @@ async function generate() {
 
         // In 'model' mode the poster already HAS its billing block, printed into
         // the same ink as everything else. Compositing a second one over it is
-        // what produced the doubled credits.
-        let composed = image.imageUrl;
+        // what produced the doubled credits. Either way the artwork goes through
+        // the analog pass — composeAsync applies it inline before drawing the
+        // credits; renderAnalog applies it on its own.
+        let composed;
         if (image.creditsMode === 'canvas') {
             status('Setting the credits…');
-            composed = await composeAsync(image.imageUrl, credits);
+            composed = await composeAsync(image.imageUrl, credits, concept.decade);
+        } else {
+            status('Aging the print…');
+            composed = await renderAnalog(image.imageUrl, concept.decade);
         }
         state.poster = composed;
         el('poster').src = composed;
@@ -704,11 +851,11 @@ async function generate() {
     }
 }
 
-function composeAsync(imageUrl, credits) {
+function composeAsync(imageUrl, credits, decade) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            document.fonts.ready.then(() => resolve(compose(img, credits)));
+            document.fonts.ready.then(() => resolve(compose(img, credits, decade)));
         };
         img.onerror = () => reject(new Error('Could not load the generated image'));
         img.src = imageUrl;
