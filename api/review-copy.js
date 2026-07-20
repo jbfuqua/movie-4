@@ -31,9 +31,15 @@ export default handler('POST', async (body) => {
         provider: textProvider,
         prompt: audiencePrompt(concept, tone),
         schema: AUDIENCE_SCHEMA,
-        maxTokens: 2000,
+        // Headroom raised with effort: at medium, adaptive thinking eats more of
+        // the budget, and a max_tokens truncation throws rather than degrading.
+        maxTokens: 3000,
         think: true,
-        effort: 'low',
+        // Was 'low'. The whole reason this call exists is to IMPROVE the copy, and
+        // a rewrite done at lower effort than the original write (which is medium)
+        // was producing copy worse than what it replaced. This is the single
+        // biggest lever on rewrite quality.
+        effort: 'medium',
         deadlineMs: DEADLINE_MS
     });
 
